@@ -1,11 +1,9 @@
 # coding=utf-8
 
 import os, sys
-import datetime
 import django
 
-sys.path.append('D:\django\taide')
-# sys.path.append('/home/usb/django/taide')
+sys.path.append('/home/usb/django/taide')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "taide.settings")  # NoQA
 django.setup()  # NoQA
 
@@ -120,14 +118,6 @@ def delBySta(station):
     delStaAdSenBySta(station)
     delStaBySta(station)
 
-def delByDate(year,month,day):
-    date = datetime.date(year,month,day)
-    num = 0
-    for day_data in Day_data.objects.order_by('id'):
-        if day_data.date == date:
-            Day_data.objects.filter(id=day_data.id).delete()
-            num += 1
-    print('删除了%d个%d-%d-%d时间的日数据' % (num,date.year,date.month,date.day))
 
 def getDayData():
     sensorinfo = 'TMA-33'
@@ -135,11 +125,11 @@ def getDayData():
 
 
 def main():
-    # getDayData()
+    getDayData()
     # delByNet('TE')
-    delChnByIsExits()
+    # delChnByIsExits()
     # delBySta('T2867')
-    # delByDate(2020,3,12)
+
 
 if __name__ == "__main__":
     main()

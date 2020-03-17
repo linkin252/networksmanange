@@ -191,19 +191,10 @@ def countDay_1OfYear(now):
 
 def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
     # 建立顶层根目录
-    STATIC_PATH = os.path.join(os.path.dirname(__file__), 'static')
+    STATIC_PATH = os.path.join('/home/usb/django/taide', 'static')
     sDenDir = 'networks'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
-
-    #if nNetMode==1:
-    #    sDenDir = 'networks/adapt'
-    #elif nNetMode==2:
-    #    sDenDir = 'networks/Seiscomp3'
-    #elif nNetMode==3:
-    #    sDenDir = 'networks/TDE-324CI'
-    #fDenDir = os.path.join(STATIC_PATH, sDenDir)
-    #mkfile(fDenDir, 0)
 
     file_list = []
     path_list = []
@@ -254,7 +245,11 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
                 from obspy.signal import PPSD
                 from obspy.imaging.cm import pqlx
 
-                st = read(path)
+                try:
+                    st = read(path)
+                except Exception as ex:
+                    print('读取数据错误\n', ex)
+                    continue
                 ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
                 outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
                 outfile2 = fDenDir + '/' + ChName + '.day_wave.low_pass_0.2Hz.png'
@@ -327,11 +322,8 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
             print(file , "Name is error.")
 
 def Net2dbDemo(sensortype):
-    #addNetDemo("D:/django/taide/static/resource/station/SeiscomP3",2)
-    addNetDemo("D:/django/taide/static/resource/station/TDE-324CI",3)
-    # addNetDemo("/home/usrdata/usb/data",3,sensortype)
-    # addNetDemo("/home/usrdata/usb/mondata",3,sensortype)
-    #addNetDemo("D:/django/taide/static/resource/station/Adapt",1)
+    addNetDemo("/home/usrdata/usb/data",3,sensortype)
+    addNetDemo("/home/usrdata/usb/mondata",3,sensortype)
     for ch in Channel.objects.order_by('id'):
         print(ch)
 
