@@ -1,0 +1,38 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>采集器参数表</title>{% endblock %}
+
+{% block mainbody %}
+    {% for digitizer_sel in digitizer_list %}
+        <tr>
+        <td style="text-align:center;width:80px ">国家</td>
+        <td style="text-align:center;width:80px ">厂家</td>
+        <td style="text-align:center;width:100px ">型号</td>
+        <td style="text-align:center;width:120px ">增益</td>
+        <td style="text-align:center;width:120px ">采样信息</td>
+        <td style="text-align:center;width:120px ">滤波器参数</td>
+        <td style="text-align:center;width:120px ">采样速率(SPS)</td>
+        <td style="text-align:center;width:120px ">灵敏度(Ct/V)</td>
+        </tr>
+
+        {% for digitizer_gain in digitizer_sel|getGain_list %}
+            {% for digitizer_rate in digitizer_gain|getRate_list %}
+                {% for digitizer_filter in digitizer_rate|getFilter_list %}
+                    <tr>
+                        <td style="text-align:center;width:100px"><a href="{% url 'instruments:digitizer_info_sel_national' digitizer_sel.ICompany.CNational.id%}">{{digitizer_sel.ICompany.CNational.ChnName}}</a></td>
+                        <td style="text-align:center;width:100px"><a href="{% url 'instruments:digitizer_info_sel_company' digitizer_sel.ICompany.id%}">{{digitizer_sel.ICompany.Name}}</a></td>
+                    <td style="text-align:center;width:100px"><a href="{% url 'instruments:digitizer_info_sel_digitizer' digitizer_sel.id%}">{{digitizer_sel.Name}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_gain.Gain}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_rate.Rate}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_filter.Filter}}</td>
+                    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' digitizer_filter.id%}">{{digitizer_filter.rate}}</a></td>
+                    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' digitizer_filter.id%}">{{digitizer_filter.sensitivity}}</a></td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+{% endblock %}
+

@@ -1,0 +1,32 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>厂家信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Company_list %}
+        {% if national_sel %}
+            <tr style="text-align:center "><h2>厂家信息表({{national_sel.ChnName}})</h2> </tr>
+        {% else %}
+            <tr style="text-align:center "><h2>厂家信息表</h2> </tr>
+        {% endif %}
+        <tr>
+            <th  style="text-align:center;width:80px "><a href="{% url 'instruments:company' %}">英文名</a></th>
+            <td style="text-align:center;width:200px "><a href="{% url 'instruments:company' %}">中文名</a></td>
+            <td style="text-align:center;width:80px "><a href="{% url 'instruments:company' %}">企业标志</a></td>
+            <td style="text-align:center;width:200px ">网站</td>
+            <td style="text-align:center;width:80px "><a href="{% url 'instruments:national' %}">国家</a></td>
+        </tr>
+        {% for company in Company_list %}
+        <tr>
+            <th  style="text-align:left;width:80px "><a href="{% url 'instruments:instrument_sel_company' company.id %}"> {{company.Name}} </a></th>
+            <td  style="text-align:left;width:200px "><a href="{% url 'instruments:instrument_sel_company' company.id %}"> {{company.ChnName}}</a></td>
+            <td  style="text-align:center;width:80px "><a href="{% url 'instruments:instrument_sel_company' company.id %}"><img src="{% static company.CIcon %}"  alt="企业标志未设置"/></a></td>
+            <td  style="text-align:left;width:200px "><a href ="{{company.CWeb}}"> {{company.CWeb}} </a></td>
+            <td  style="text-align:center;width:80px "><a href="{% url 'instruments:company_sel_national' company.CNational.id %}"><img src="{% static company.CNational.Icon64 %}"  alt="64*64国家图片未找到"/></a></td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No company are available.</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>采集器-传感器组信息表</title>{% endblock %}
+
+{% block mainbody %}
+    <tr style="text-align:center "><h2>采集器-传感器组表</h2> </tr>
+    <tr>
+    <td style="text-align:center;width:60px ">序号</td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer' %}">数采型号</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info' %}">数采速率</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info' %}">数采灵敏度</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info' %}">数采滤波器</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器1型号</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器1频带</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器1灵敏度</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器2型号</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器2频带</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器2灵敏度</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器3型号</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器3频带</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器3灵敏度</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器4型号</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器4频带</a></td>
+    <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">传感器4灵敏度</a></td>
+    </tr>
+    {% for ad_sensor in ad_sensor_list %}
+        <tr>
+            <td  style="text-align:left;width:60px "> {{forloop.counter}}</td>
+            <td  style="text-align:left;width:120px"> <a href= "{% url 'instruments:digitizer_info_sel_digitizer' ad_sensor.ADInfo.DigitizerRate.DigitizerGain.Digitizer.id %}"> {{ad_sensor.ADInfo.DigitizerRate.DigitizerGain.Digitizer.Name}} </td>
+            <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' ad_sensor.ADInfo.id%}">{{ad_sensor.ADInfo.rate}}</a></td>
+            <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' ad_sensor.ADInfo.id%}">{{ad_sensor.ADInfo.sensitivity}}</a></td>
+            <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' ad_sensor.ADInfo.id%}">{{ad_sensor.ADInfo.Filter}}</a></td>
+            <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' ad_sensor.SensorInfo1.Sensor.id %}">{{ad_sensor.SensorInfo1.Sensor.Name}}</a></td>
+            <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo1.id %}">{{ad_sensor.SensorInfo1.IFreqInfo}}</a></td>
+            <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo1.id %}">{{ad_sensor.SensorInfo1.ISensitivityInfo}}</a></td>
+            {% if ad_sensor.SensorInfo1.id != ad_sensor.SensorInfo2.id  %}
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' ad_sensor.SensorInfo2.Sensor.id %}">{{ad_sensor.SensorInfo2.Sensor.Name}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo2.id %}">{{ad_sensor.SensorInfo2.IFreqInfo}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo2.id %}">{{ad_sensor.SensorInfo2.ISensitivityInfo}}</a></td>
+            {% else %}
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+            {% endif %}
+            {% if ad_sensor.SensorInfo1.id != ad_sensor.SensorInfo3.id  %}
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' ad_sensor.SensorInfo3.Sensor.id %}">{{ad_sensor.SensorInfo3.Sensor.Name}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo3.id %}">{{ad_sensor.SensorInfo3.IFreqInfo}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo3.id %}">{{ad_sensor.SensorInfo3.ISensitivityInfo}}</a></td>
+            {% else %}
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+            {% endif %}
+            {% if ad_sensor.SensorInfo1.id != ad_sensor.SensorInfo4.id  %}
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' ad_sensor.SensorInfo4.Sensor.id %}">{{ad_sensor.SensorInfo4.Sensor.Name}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo4.id %}">{{ad_sensor.SensorInfo4.IFreqInfo}}</a></td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' ad_sensor.SensorInfo4.id %}">{{ad_sensor.SensorInfo4.ISensitivityInfo}}</a></td>
+            {% else %}
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+                <td  style="text-align:left;width:120px ">----</td>
+            {% endif %}
+        </tr>
+    {% endfor %}
+{% endblock %}
+

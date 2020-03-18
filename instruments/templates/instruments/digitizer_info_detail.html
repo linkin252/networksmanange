@@ -1,0 +1,16 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>采集参数表</title>{% endblock %}
+
+{% block mainbody %}
+    <h2>国家：{{digitizer_sel.ICompany.CNational.ChnName}}&nbsp&nbsp  厂家：{{digitizer_sel.ICompany.ChnName}}&nbsp&nbsp采集器型号：{{digitizer_sel.Name}}</h2>
+    <h2>采样信息：{{digitizer_filter.DigitizerRate.Rate}} 灵敏度信息：{{digitizer_filter.DigitizerRate.DigitizerGain.Gain}}滤波器：{{digitizer_filter.Filter}}</h2>
+    <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".resp" %}'> RESP文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".xml" %}'> XML文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".dataless" %}'> Dataless文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}} 幅频响应图 </a></h4> </tr>
+    <tr style="text-align:center "><img src='{% static  digitizer_filter.IParUrl|add:".freq_amp.png" %}'  alt="响应图文件未找到"/></>
+{% endblock %}
+

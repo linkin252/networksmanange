@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+{%load static%}
+<meta charset="UTF-8">
+<html lang="zh-hans">
+
+<head>
+{% block titlebody %}
+{% endblock %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/instruments/style.css' %}" />
+</head>
+
+<body>
+<h1><a href="{% url 'instruments:national'%}">国家&nbsp</a>─<a href="{% url 'instruments:company'%}">&nbsp厂家&nbsp</a>─<a href="{% url 'instruments:instrument'%}">&nbsp仪器</a> </h1>
+<h1>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+    ├<a href="{% url 'instruments:digitizer'%}">&nbsp采集器&nbsp</a>─<a href="{% url 'instruments:digitizer_info'%}">&nbsp参数&nbsp</a>───┐</h1>
+<h1>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+    └<a href="{% url 'instruments:sensor'%}">&nbsp传感器&nbsp</a>─<a href="{% url 'instruments:sensor_info'%}">&nbsp参数&nbsp</a>─<a href="{% url 'instruments:ad_sensor'%}">&nbsp仪器组&nbsp</a>┐</h1>
+<h1>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a href="{% url 'networks:network'%}">&nbsp台网&nbsp</a>──────<a href="{% url 'networks:station'%}">&nbsp台站&nbsp</a>──────<a href="{% url 'networks:adsensor'%}">&nbsp台站-仪器&nbsp</a>─<a href="{% url 'networks:channel'%}">&nbsp分向&nbsp</a>─<a href="{% url 'networks:day_data'%}">&nbsp日数据&nbsp</a> </h1>
+
+<table>
+    <style type="text/css">
+    body
+    {
+        width: 1200px;
+        height:1200px;
+    }
+    table
+    {
+        border-collapse :collapse ;
+    }
+    th,td
+    {
+        width:120px;
+        height:20px;
+        border :1px solid black;
+        font-size:16px;
+        text-align :center;
+    }
+    </style>
+    {% block mainbody %}
+    {% endblock %}
+</table>
+
+</body>
+</html>

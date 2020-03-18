@@ -1,0 +1,35 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>采集器详细参数表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if digitizer_sel %}
+        <h2>国家：{{digitizer_sel.ICompany.CNational.ChnName}}&nbsp&nbsp  厂家：{{digitizer_sel.ICompany.ChnName}}&nbsp&nbsp采集器型号：{{digitizer_sel.Name}}</h2>
+        <h2>{{digitizer_sel.ICompany.ChnName}} {{digitizer_sel.Name}} 采集器参数表</h2>
+        <tr>
+        <td style="text-align:center;width:100px ">型号</td>
+        <td style="text-align:center;width:120px ">增益</td>
+        <td style="text-align:center;width:120px ">采样信息</td>
+        <td style="text-align:center;width:120px ">滤波器参数</td>
+        <td style="text-align:center;width:120px ">采样速率(SPS)</td>
+        <td style="text-align:center;width:120px ">灵敏度(Ct/V)</td>
+        </tr>
+        {% for digitizer_gain in digitizer_sel|getGain_list %}
+            {% for digitizer_rate in digitizer_gain|getRate_list %}
+                {% for digitizer_filter in digitizer_rate|getFilter_list %}
+                    <tr>
+                    <td style="text-align:center;width:100px">{{digitizer_sel.Name}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_gain.Gain}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_rate.Rate}}</td>
+                    <td style="text-align:center;width:120px ">{{digitizer_filter.Filter}}</td>
+                    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' digitizer_filter.id%}">{{digitizer_filter.rate}}</a></td>
+                    <td style="text-align:center;width:120px "><a href="{% url 'instruments:digitizer_info_detail' digitizer_filter.id%}">{{digitizer_filter.sensitivity}}</a></td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+{% endblock %}
+

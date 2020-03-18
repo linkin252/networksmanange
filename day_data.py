@@ -9,7 +9,7 @@ def mkfile(path, mode):
     # 去除首位空格
     path = path.strip()
     # 去除尾部 \ 符号
-    path = path.rstrip("\\")
+    path = path.rstrip("/")
     # 判断路径是否存在
     isExists = os.path.exists(path)
     # 判断结果
@@ -33,12 +33,12 @@ def show_files(path, all_files):
     # print(files)
     for file in files:
         # print(file)
-        if os.path.isdir(path + '\\' + file):
-            # print(path + '\\' + file)
-            show_files(path + '\\' + file, all_files)
-        elif os.path.isfile(path + '\\' + file):
+        if os.path.isdir(path + '/' + file):
+            # print(path + '/' + file)
+            show_files(path + '/' + file, all_files)
+        elif os.path.isfile(path + '/' + file):
             all_files.append(file)
-            #all_files.append(path  + '\\' + file)
+            #all_files.append(path  + '/' + file)
     return all_files
 
 def show_path(path, all_files,all_paths):
@@ -46,12 +46,12 @@ def show_path(path, all_files,all_paths):
     # print(files)
     for file in files:
         # print(file)
-        if os.path.isdir(path + '\\' + file):
-            # print(path + '\\' + file)
-            show_path(path + '\\' + file, all_files,all_paths)
-        elif os.path.isfile(path + '\\' + file):
+        if os.path.isdir(path + '/' + file):
+            # print(path + '/' + file)
+            show_path(path + '/' + file, all_files,all_paths)
+        elif os.path.isfile(path + '/' + file):
             all_files.append(file)
-            all_paths.append(path  + '\\' + file)
+            all_paths.append(path  + '/' + file)
     return (all_files,all_paths)
 #
 # def get_or_create_Network(NetCode,NetName,fSrcDir,sDenDir,nNetMode):
@@ -179,17 +179,16 @@ def show_path(path, all_files,all_paths):
 def addNetDemo(fSrcDir,nNetMode=1):
     # 建立顶层根目录
     STATIC_PATH = os.path.join(os.path.dirname(__file__), 'static')
-    STATIC_PATH = '/home/usrdata/usb/django/taide/static'
     sDenDir = 'networks'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
 
     #if nNetMode==1:
-    #    sDenDir = 'networks\\adapt'
+    #    sDenDir = 'networks/adapt'
     #elif nNetMode==2:
-    #    sDenDir = 'networks\\Seiscomp3'
+    #    sDenDir = 'networks/Seiscomp3'
     #elif nNetMode==3:
-    #    sDenDir = 'networks\\TDE-324CI'
+    #    sDenDir = 'networks/TDE-324CI'
     #fDenDir = os.path.join(STATIC_PATH, sDenDir)
     #mkfile(fDenDir, 0)
 
@@ -223,18 +222,18 @@ def addNetDemo(fSrcDir,nNetMode=1):
                 # ch = get_or_create_CH(StaADSensor,LocCode, ChCode)
                 # 以上，添加1个台站的逻辑确实很复杂
 
-                sDenDir2 = sDenDir + '\\' + NetCode
+                sDenDir2 = sDenDir + '/' + NetCode
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
                 mkfile(fDenDir, 0)
 
-                sDenDir2 = sDenDir2 + '\\' + StaCode
+                sDenDir2 = sDenDir2 + '/' + StaCode
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
                 mkfile(fDenDir, 0)
 
-                sDenDir2 = sDenDir2 + '\\' + nYear
+                sDenDir2 = sDenDir2 + '/' + nYear
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
                 mkfile(fDenDir, 0)
-                sDenDir2 = sDenDir2 + '\\' + nDay
+                sDenDir2 = sDenDir2 + '/' + nDay
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
                 mkfile(fDenDir, 0)
 
@@ -245,11 +244,11 @@ def addNetDemo(fSrcDir,nNetMode=1):
 
                 st = read(path)
                 ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
-                outfile1 = fDenDir + '\\' + ChName + '.day_wave.png'
-                outfile2 = fDenDir + '\\' + ChName + '.day_wave.low_pass_0.2Hz.png'
-                outfile3 = fDenDir + '\\' + ChName + '.day_wave.high_pass_0.2Hz.png'
-                outfile4 = fDenDir + '\\' + ChName + '.ppsd.png'
-                outfile5 = fDenDir + '\\' + ChName + '.spectrogram.png'
+                outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
+                outfile2 = fDenDir + '/' + ChName + '.day_wave.low_pass_0.2Hz.png'
+                outfile3 = fDenDir + '/' + ChName + '.day_wave.high_pass_0.2Hz.png'
+                outfile4 = fDenDir + '/' + ChName + '.ppsd.png'
+                outfile5 = fDenDir + '/' + ChName + '.spectrogram.png'
 
                 print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
                 st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30, right_vertical_labels=True,
@@ -288,21 +287,18 @@ def addNetDemo(fSrcDir,nNetMode=1):
                 # #print(paz)
                 # st = read(path)
                 # #print(st)
-                paz = {'zeros': [0j], 'poles': [(-715+736j), (-715-736j), (-10020+3159j), (-10020-3159j)], 'gain': 116000000000000.0, 'sensitivity': 154392.183}
-                ppsd = PPSD(st[0].stats, paz)
-                ppsd.add(st)
-                #print(ppsd.times_data)
-                #print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
-                ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
-                ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
+                # ppsd = PPSD(st[0].stats, paz)
+                # ppsd.add(st)
+                # #print(ppsd.times_data)
+                # #print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
+                # ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
+                # ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
                 # if (sensor.IMainType<2000):
-                #     outfile6 = fDenDir + '\\' + ChName + '.1-2s.sp.png'
+                #     outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
                 #     ppsd.plot_temporal(1.414, filename=outfile6)
                 # elif (2000<=sensor.IMainType and sensor.IMainType<3000):       # 加速度模式)
-                #     outfile6 = fDenDir + '\\' + ChName + '.1-2Hz.sp.png'
+                #     outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
                 #     ppsd.plot_temporal(.707, filename=outfile6)
-                outfile6 = fDenDir + '\\' + ChName + '.1-2Hz.sp.png'
-                ppsd.plot_temporal(.707, filename=outfile6)
                 #
                 # fBlankTime = 0.
                 # for i in range(1,len(ppsd.times_data)): #  1个整时间段说明未丢数
@@ -319,10 +315,10 @@ def addNetDemo(fSrcDir,nNetMode=1):
             print(file , "Name is error.")
 
 def Net2dbDemo():
-    #addNetDemo("D:\\django\\taide\\static\\resource\\station\\SeiscomP3",2)
-    addNetDemo("D:\\django\\taide\\static\\resource\\station\\TDE-324CI",3)
-    # addNetDemo("/home/usrdata/usb/data",3)
-    #addNetDemo("D:\\django\\taide\\static\\resource\\station\\Adapt",1)
+    #addNetDemo("D:/django/taide/static/resource/station/SeiscomP3",2)
+    # addNetDemo("D:/django/taide/static/resource/station/TDE-324CI",3)
+    addNetDemo("/home/usrdata/usb/data",3)
+    #addNetDemo("D:/svn/python/django/taide/static/resource/station/Adapt",1)
 
 def getStaticStr():
     return os.path.join(os.path.dirname(__file__), 'static')
@@ -353,16 +349,16 @@ ppsd.plot(xaxis_frequency=True, cmap=pqlx)
 ppsd.plot(percentiles=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100], cmap=pqlx)
 ppsd.plot(cumulative=True, cmap=pqlx)
 ppsd.plot(cmap=pqlx)
-ppsd.plot("jpg\\T1.24-1.png", cmap=pqlx)
-ppsd.plot("jpg\\T1.24-1.pdf", cmap=pqlx)
-ppsd.plot("jpg\\T1.24-2.png", xaxis_frequency=True, cmap=pqlx)
-ppsd.plot("jpg\\T1.24-`2.pdf", xaxis_frequency=True, cmap=pqlx)
-ppsd.plot_spectrogram(filename="jpg\\T1.24-3.png", cmap='CMRmap_r')
-ppsd.plot_temporal(1, filename="jpg\\T1.24-4.png")
+ppsd.plot("jpg/T1.24-1.png", cmap=pqlx)
+ppsd.plot("jpg/T1.24-1.pdf", cmap=pqlx)
+ppsd.plot("jpg/T1.24-2.png", xaxis_frequency=True, cmap=pqlx)
+ppsd.plot("jpg/T1.24-`2.pdf", xaxis_frequency=True, cmap=pqlx)
+ppsd.plot_spectrogram(filename="jpg/T1.24-3.png", cmap='CMRmap_r')
+ppsd.plot_temporal(1, filename="jpg/T1.24-4.png")
 
-st = read("data\\BW.KW1..EHZ.D.2011.037")
+st = read("data/BW.KW1..EHZ.D.2011.037")
 ppsd.add(st)
-ppsd.plot("jpg\\T1.24-5.png", cmap=pqlx)
+ppsd.plot("jpg/T1.24-5.png", cmap=pqlx)
 
 
 def DoData(fSrcDir,nNetMode=1):
@@ -371,11 +367,11 @@ def DoData(fSrcDir,nNetMode=1):
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
     if nNetMode==1:
-        sDenDir = 'networks\\adapt'
+        sDenDir = 'networks/adapt'
     elif nNetMode==2:
-        sDenDir = 'networks\\Seiscomp3'
+        sDenDir = 'networks/Seiscomp3'
     elif nNetMode==3:
-        sDenDir = 'networks\\TDE-324CI'
+        sDenDir = 'networks/TDE-324CI'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
 

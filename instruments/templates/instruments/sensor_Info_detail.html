@@ -1,0 +1,57 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>传感器参数信息表</title>{% endblock %}
+
+{% block mainbody %}
+    <tr style="text-align:center "><h3>传感器类型：{{sensor.Name}} </h3> </tr>
+    <h3>国家：{{sensorInfo.Sensor.ICompany.CNational.ChnName}}&nbsp&nbsp  厂家：{{sensorInfo.Sensor.ICompany.ChnName}}&nbsp&nbsp采集器型号：{{digitizer_sel.Name}}</h3>
+    <h3>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:零点数量={{sensorInfo.ZeroNum}}&nbsp&nbsp&nbsp&nbsp极点数量={{sensorInfo.PoleNum}}</h3>
+    {% if sensorInfo.ZeroNum != 0 or sensorInfo.PoleNum != 0 %}
+        <table><h4>
+            <style type="text/css">
+            table
+            {
+                border-collapse :collapse ;
+            }
+            th,td
+            {
+                border :1px solid black;
+            }
+            </style>
+            <tr>
+                <td style="text-align:center;width:100px ">零极点类型</td>
+                <td style="text-align:center;width:50px ">序号</td>
+                <td style="text-align:center;width:200px ">零极点数值</td>
+            </tr>
+            {% if sensorInfo.ZeroNum != 0 %}
+                {% for zero in  sensorInfo|getZero_list%}
+                    <tr>
+                        <td  style="text-align:center;width:100px   ">零点 </td>
+                        <td  style="text-align:center;width:50px   ">{{forloop.counter}} </td>
+                        <td  style="text-align:center;width:200px ">{{zero.sComplex}}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            {% if sensorInfo.PoleNum != 0 %}
+                {% for zero in  sensorInfo|getPole_list%}
+                    <tr>
+                        <td  style="text-align:center;width:100px   ">极点 </td>
+                        <td  style="text-align:center;width:100px   ">{{forloop.counter}} </td>
+                        <td  style="text-align:center;width:200px ">{{zero.sComplex}}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            </h4> </table>
+    {% endif %}
+
+    <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".resp" %}'> RESP文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".xml" %}'> XML文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".dataless" %}'> Dataless文件</a></h4> </tr>
+    <tr style="text-align:center "><h4>{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}} 幅频相频响应图 </a></h4> </tr>
+    <tr style="text-align:center "><img src='{% static  sensorInfo.IParUrl|add:".freq_amp_phase.png" %}'  alt="响应图文件未找到"/></tr>
+    <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}: 系统理论脉冲响应图 </a></h4> </tr>
+    <tr style="text-align:center "><img src='{% static  sensorInfo.IParUrl|add:".impulse.png" %}'  alt="3响应图文件未找到"/></tr>
+{% endblock %}
+

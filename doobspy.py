@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-# import matplotlib.pyplot as plt
-
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import pyplot as plt
-
+import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties  # 字体管理器
 
 import obspy
@@ -199,19 +194,19 @@ def parser_digitizer_resp(dir, sName):
 
 
 """
-dir = 'D:\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324_10Vpp_100Hz_Linear'
+dir = 'D:\\svn\\python\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324_10Vpp_100Hz_Linear'
 sName = "泰德 TDE324CI"
 (sample_rate,sensitivity) = parser_digitizer_resp(dir,sName)
 print(sample_rate,sensitivity)
 
-dir = 'D:\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324___-10V_100Hz_Linear'
+dir = 'D:\\svn\\python\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324___-10V_100Hz_Linear'
 sName = "泰德 TDE324CI"
 (sample_rate,sensitivity) = parser_digitizer_resp(dir,sName)
 print(sample_rate,sensitivity)
 
-#dir= "D:\\django\\taide\\static\\resource\\IRIS\\dataloggers\\taide.old\\RESP.XX.GD001..HHZ.TDE324.1.40.200.LP"
-dir = 'D:\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324___-10V_100Hz_Linear.resp'
-#dir ='D:\\django\\taide\\static\\instruments\\digitizer\\geotech\\SMART24\\geotech_SMART24_40_Vpp_1_200_Hz_200_Hz_Linear'
+#dir= "D:\\svn\\python\\django\\taide\\static\\resource\\IRIS\\dataloggers\\taide.old\\RESP.XX.GD001..HHZ.TDE324.1.40.200.LP"
+dir = 'D:\\svn\\python\\django\\taide\\static\\instruments\\digitizer\\taide\\TDE-324\\taide_TDE-324___-10V_100Hz_Linear.resp'
+#dir ='D:\\svn\\python\\django\\taide\\static\\instruments\\digitizer\\geotech\\SMART24\\geotech_SMART24_40_Vpp_1_200_Hz_200_Hz_Linear'
 sName = "泰德 TDE324CI"
 (sample_rate,sensitivity) = parser_digitizer_resp(dir,sName)
 print(sample_rate,sensitivity)

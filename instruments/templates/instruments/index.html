@@ -1,0 +1,14 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>基本信息表</title>{% endblock %}
+
+{% block mainbody %}
+    <tr  style="text-align:center "><h2>仪器基本参数表 </h2></tr>
+    <tr> <td  style="text-align:center;width:200px "><a href="{% url 'instruments:national' %}"> 国家资料表 </a></td></tr>
+    <tr> <td  style="text-align:center;width:200px "><a href="{% url 'instruments:company'  %}"> 厂家资料表 </a></td></tr>
+    <tr> <td  style="text-align:center;width:200px "><a href="{% url 'instruments:sensor' %}"> 传感器资料表 </a></td></tr>
+    <tr> <td  style="text-align:center;width:200px "><a href="{% url 'instruments:sensor_info' %}"> 传感器信息表 </a></td></tr>
+{% endblock %}
+
+

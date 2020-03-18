@@ -1,0 +1,66 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>仪器信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Sensor_list %}
+        {% if company_sel %}
+            <tr style="text-align:center "><h2>传感器表({{company_sel.ChnName}})</h2> </tr>
+        {% elif national_sel %}
+            <tr style="text-align:center "><h2>传感器表({{national_sel.ChnName}})</h2> </tr>
+        {% else %}
+            <tr style="text-align:center "><h2>传感器表(全部)</h2> </tr>
+        {% endif %}
+        <table>
+        <tr>
+            <th style="text-align:center;width:60px">序号</th>
+            <td style="text-align:center;width:180px "><a href="{% url 'instruments:sensor'%}">传感器型号</a></td>
+            <td style="text-align:center;width:120px "><a href="{% url 'instruments:company'%}">生产厂商</a></td>
+            <td style="text-align:center;width:80px ">传感器类型</td>
+            <td style="text-align:center;width:80px ">定型信息</td>
+            <td style="text-align:center;width:80px "><a href="{% url 'instruments:national'%}">国家</a></td>
+        </tr>
+        {% for sensor in Sensor_list %}
+            <tr>
+                <th  style="text-align:center;width:60px"> {{forloop.counter}}</th>
+                <td  style="text-align:left  ;width:180px "><a href="{% url 'instruments:sensor_detail' sensor.id %}"> {{sensor.Name}} </a></td>
+                <td  style="text-align:center;width:120px "> <a href="{% url 'instruments:instrument_sel_company' sensor.ICompany.id %}"> {{sensor.ICompany.Name}} </a></td>
+                <td  style="text-align:center;width:80px ">{{sensor.get_IMainType_display}}</td>
+                <td style="text-align:center;width:80px ">{{sensor.get_IDBOK_display}}</td>
+                <td  style="text-align:center "><a href="{% url 'instruments:instrument_sel_national' sensor.ICompany.CNational.id %}"><img src="{% static sensor.ICompany.CNational.Icon64 %}"  alt="64*64国家图片未找到"/>
+            </tr>
+        {% endfor %}
+        </table>
+    {% endif %}
+
+    {% if Digitizer_list %}
+        {% if company_sel %}
+            <tr style="text-align:center "><h2>采集器表({{company_sel.ChnName}})</h2> </tr>
+        {% elif national_sel %}
+            <tr style="text-align:center "><h2>采集器表({{national_sel.ChnName}})</h2> </tr>
+        {% else %}
+            <tr style="text-align:center "><h2>采集器表(全部)</h2> </tr>
+        {% endif %}
+
+        <table>
+        <tr>
+            <th style="text-align:center;width:60px">序号</th>
+            <td style="text-align:center;width:180px "><a href="{% url 'instruments:digitizer'%}">采集器型号</a></td>
+            <td style="text-align:center;width:120px "><a href="{% url 'instruments:company'%}">生产厂商</a></td>
+            <td style="text-align:center;width:80px ">定型信息</td>
+            <td style="text-align:center;width:80px "><a href="{% url 'instruments:national'%}">国家</a></td>
+        </tr>
+        {% for digitizer in Digitizer_list %}
+            <tr>
+                <th  style="text-align:center;width:60px"> {{forloop.counter}}</th>
+                <td  style="text-align:left  ;width:180px "><a href="{% url 'instruments:digitizer_detail' digitizer.id %}"> {{digitizer.Name}} </a></td>
+                <td  style="text-align:center;width:120px "> <a href="{% url 'instruments:instrument_sel_company' digitizer.ICompany.id %}"> {{digitizer.ICompany.Name}} </a></td>
+                <td style="text-align:center;width:80px ">{{digitizer.get_IDBOK_display}}</td>
+                <td  style="text-align:center "><a href="{% url 'instruments:instrument_sel_national' digitizer.ICompany.CNational.id %}"><img src="{% static digitizer.ICompany.CNational.Icon64 %}"  alt="64*64国家图片未找到"/>
+            </tr>
+        {% endfor %}
+        </table>
+    {% endif %}
+{% endblock %}
+

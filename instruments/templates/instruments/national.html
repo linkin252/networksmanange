@@ -1,0 +1,28 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>国家信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if National_list %}
+        <tr style="text-align:center "><h2>国家信息表</h2> </tr>
+        <tr>
+            <th style="text-align:center ">英文名</th>
+            <td style="text-align:center ">中文名</td>
+            <td style="text-align:center ">32*32图标</td>
+            <td style="text-align:center ">64*64图标</td>
+            <td style="text-align:center ">128*128图标</td>
+        </tr>
+        {% for national in National_list %}
+        <tr>
+            <th  style="text-align:left "><a href="{% url 'instruments:company_sel_national' national.id %}"> {{national.Name}} </a></th>
+            <td  style="text-align:left "><a href="{% url 'instruments:company_sel_national' national.id %}"> {{national.ChnName}}</a></td>
+            <td  style="text-align:center "><img src="{% static national.Icon32 %}"  alt="32*32图片未找到"/></td>
+            <td  style="text-align:center "><img src="{% static national.Icon64 %}"  alt="64*64图片未找到"/></td>
+            <td  style="text-align:center "><img src="{% static national.Icon128 %}"  alt="128*128图片未找到"/></td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No national are available.</p>
+    {% endif %}
+{% endblock %}

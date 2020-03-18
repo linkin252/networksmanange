@@ -1,0 +1,151 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>传感器详细参数表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if national_list %}
+        <tr style="text-align:center "><h2>传感器详细参数表(全部)</h2> </tr>
+    {% elif national_sel %}
+        <tr style="text-align:center "><h2>传感器详细参数表({{national_sel.ChnName}})</h2> </tr>
+    {% elif company_sel %}
+        <tr style="text-align:center "><h2>传感器详细参数表({{company_sel.ChnName}})</h2> </tr>
+    {% endif %}
+
+    {% if national_list or national_sel or company_sel %}
+        <tr>
+        {% if national_list or national_sel %}
+        <td style="text-align:center;width:60px ">国家</a></td>
+        {% endif %}
+        <td style="text-align:center;width:150px "><a href="{% url 'instruments:company' %}">生产厂家</a></td>
+        <td style="text-align:center;width:120px "><a href="{% url 'instruments:sensor' %}">传感器型号</a></td>
+        <td style="text-align:center;width:80px ">传感器类型</td>
+        <td  style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">频带</a></td>
+        <td  style="text-align:center;width:120px "><a href="{% url 'instruments:sensor_info' %}">灵敏度</a></td>
+        <td style="text-align:center;width:80px ">定型信息</td>
+        </tr>
+    {% endif %}
+
+    {% if national_list %}
+        {% for national_sel in national_list %}
+            {%if national_sel|getCompany_Ct > 0 %}
+            <tr>
+            <td style="text-align:left;width:60px"><a href="{% url 'instruments:sensor_info_sel_national' national_sel.id %}">{{national_sel.ChnName}}</a></td>
+            <td style="text-align:center;width:150px ">{{national_sel|getCompany_Ct}}家</td>
+            <td style="text-align:center;width:120px "></td>
+            <td style="text-align:center;width:80px "></td>
+            <td  style="text-align:center;width:120px "></td>
+            <td  style="text-align:center;width:120px "></td>
+            <td style="text-align:center;width:80px "></td>
+            </tr>
+            {% for company_sel in national_sel|getCompany_list %}
+                <tr>
+                <td style="text-align:center;width:60px "></td>
+                <td  style="text-align:left;width:150px "> <a href="{% url 'instruments:sensor_info_sel_company' company_sel.id %}">{{forloop.counter}}、{{company_sel.ChnName}} </a></td>
+                <td style="text-align:center;width:120px ">{{company_sel|getSensor_Ct}}个</td>
+                <td style="text-align:center;width:80px "></td>
+                <td  style="text-align:center;width:120px "></td>
+                <td  style="text-align:center;width:120px "></td>
+                <td style="text-align:center;width:80px "></td>
+                </tr>
+                {% for sensor_sel in company_sel|getSensor_list %}
+                    <tr>
+                    <td style="text-align:center;width:60px "></td>
+                    <td  style="text-align:center;width:150px "></td>
+                    <td style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' sensor_sel.id %}">{{forloop.counter}}、{{sensor_sel.Name}} </td>
+                    <td style="text-align:center;width:80px ">{{sensor_sel|getSensorInfo_Ct}}类</td>
+                    <td  style="text-align:center;width:120px "></td>
+                    <td  style="text-align:center;width:120px "></td>
+                    <td  style="text-align:center;width:80px "></td>
+                    </tr>
+                    {% for sensor_info in sensor_sel|getSensorInfo_list %}
+                        <tr>
+                        <td style="text-align:center;width:60px "></td>
+                        <td  style="text-align:center;width:150px "></td>
+                        <td style="text-align:center;width:120px "></td>
+                        <td  style="text-align:center;width:100px ">{{sensor_info.Sensor.get_IMainType_display}}</td>
+                        <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.IFreqInfo}}</td>
+                        <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.ISensitivityInfo}}</td>
+                        <td style="text-align:center;width:80px ">{{sensor_info.Sensor.get__IDBOK__display}}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            {% endfor %}
+            {% endif %}
+        {% endfor %}
+    {% elif national_sel %}
+        <tr>
+        <td style="text-align:left;width:60px"><a href="{% url 'instruments:sensor_info_sel_national' national_sel.id %}">{{national_sel.ChnName}}</a></td>
+        <td style="text-align:center;width:150px ">{{national_sel|getCompany_Ct}}家</td>
+        <td style="text-align:center;width:120px "></td>
+        <td style="text-align:center;width:80px "></td>
+        <td  style="text-align:center;width:120px "></td>
+        <td  style="text-align:center;width:120px "></td>
+        <td style="text-align:center;width:80px "></td>
+        </tr>
+        {% for company_sel in national_sel|getCompany_list %}
+            <tr>
+            <td style="text-align:center;width:60px "></td>
+            <td  style="text-align:left;width:150px "> <a href="{% url 'instruments:sensor_info_sel_company' company_sel.id %}">{{forloop.counter}}、{{company_sel.ChnName}} </a></td>
+            <td style="text-align:center;width:120px ">{{company_sel|getSensor_Ct}}个</td>
+            <td style="text-align:center;width:80px "></td>
+            <td  style="text-align:center;width:120px "></td>
+            <td  style="text-align:center;width:120px "></td>
+            <td style="text-align:center;width:80px "></td>
+            </tr>
+            {% for sensor_sel in company_sel|getSensor_list %}
+                <tr>
+                <td style="text-align:center;width:60px "></td>
+                <td  style="text-align:center;width:150px "></td>
+                <td style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' sensor_sel.id %}">{{forloop.counter}}、{{sensor_sel.Name}} </td>
+                <td style="text-align:center;width:80px ">{{sensor_sel|getSensorInfo_Ct}}类</td>
+                <td  style="text-align:center;width:120px "></td>
+                <td  style="text-align:center;width:120px "></td>
+                <td  style="text-align:center;width:80px "></td>
+                </tr>
+                {% for sensor_info in sensor_sel|getSensorInfo_list %}
+                <tr>
+                <td style="text-align:center;width:60px "></td>
+                <td  style="text-align:center;width:150px "></td>
+                <td style="text-align:center;width:120px "></td>
+                <td  style="text-align:center;width:100px ">{{sensor_info.Sensor.get_IMainType_display}}</td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.IFreqInfo}}</td>
+                <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.ISensitivityInfo}}</td>
+                <td style="text-align:center;width:80px ">{{sensor_info.Sensor.get__IDBOK__display}}</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        {% endfor %}
+    {% elif company_sel %}
+        <tr>
+        <td  style="text-align:left;width:150px "> <a href="{% url 'instruments:sensor_info_sel_company' company_sel.id %}">{{company_sel.ChnName}} </a></td>
+        <td style="text-align:center;width:120px ">{{company_sel|getSensor_Ct}}个</td>
+        <td style="text-align:center;width:80px "></td>
+        <td  style="text-align:center;width:120px "></td>
+        <td  style="text-align:center;width:120px "></td>
+        <td style="text-align:center;width:80px "></td>
+        </tr>
+        {% for sensor_sel in company_sel|getSensor_list %}
+            <tr>
+            <td  style="text-align:center;width:150px "></td>
+            <td style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_detail' sensor_sel.id %}">{{forloop.counter}}、{{sensor_sel.Name}} </td>
+            <td style="text-align:center;width:80px ">{{sensor_sel|getSensorInfo_Ct}}类</td>
+            <td  style="text-align:center;width:120px "></td>
+            <td  style="text-align:center;width:120px "></td>
+            <td  style="text-align:center;width:80px "></td>
+            </tr>
+            {% for sensor_info in sensor_sel|getSensorInfo_list %}
+            <tr>
+            <td  style="text-align:center;width:150px "></td>
+            <td style="text-align:center;width:120px "></td>
+            <td  style="text-align:center;width:100px ">{{sensor_info.Sensor.get_IMainType_display}}</td>
+            <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.IFreqInfo}}</td>
+            <td  style="text-align:left;width:120px "><a href="{% url 'instruments:sensor_info_detail' sensor_info.id %}">{{sensor_info.ISensitivityInfo}}</td>
+            <td style="text-align:center;width:80px ">{{sensor_info.Sensor.get__IDBOK__display}}</td>
+            </tr>
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
+{% endblock %}
+
