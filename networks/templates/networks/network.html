@@ -1,0 +1,26 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>台网信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Network_list %}
+        <tr style="text-align:center "><h2>台网信息表</h2> </tr>
+        <tr>
+            <th style="text-align:center ">序号</th>
+            <td style="text-align:center ">台网代码</td>
+            <td style="text-align:center ">台网名称</td>
+            <td style="text-align:center ">台网类型</td>
+        </tr>
+        {% for network in Network_list %}
+        <tr>
+            <th  style="text-align:center ">{{forloop.counter}}</th>
+            <td  style="text-align:center ">{{network.Code}}</td>
+            <td  style="text-align:center ">{{network.Name}}</td>
+            <td  style="text-align:center ">{{network.INetMode}}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No network are available.</p>
+    {% endif %}
+{% endblock %}

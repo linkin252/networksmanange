@@ -1,0 +1,26 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>台站仪器表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Sta_adsensor_list %}
+        <tr style="text-align:center "><h2>台站仪器表</h2> </tr>
+        <tr>
+            <th style="text-align:center ">序号</th>
+            <td style="text-align:center ">台网代码</td>
+            <td style="text-align:center ">台站代码</td>
+            <td style="text-align:center ">仪器组合</td>
+        </tr>
+        {% for sta_ad_sensor in Sta_adsensor_list %}
+        <tr>
+            <th  style="text-align:center ">{{forloop.counter}}</th>
+            <td  style="text-align:center ">{{sta_ad_sensor.Station.Network.Code}}</td>
+            <td  style="text-align:center ">{{sta_ad_sensor.Station.Code}}</td>
+            <td  style="text-align:center;width:200px ">{{sta_ad_sensor.ADSensor}}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No station-adsensor are available.</p>
+    {% endif %}
+{% endblock %}

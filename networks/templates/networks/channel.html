@@ -1,0 +1,35 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>通道信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Channel_list %}
+        <tr style="text-align:center "><h2>通道信息表</h2> </tr>
+        <tr>
+            <th style="text-align:center ">序号</th>
+            <td style="text-align:center ">台网代码</td>
+            <td style="text-align:center ">台站代码</td>
+            <td style="text-align:center ">仪器组合</td>
+            <td style="text-align:center ">位置代码</td>
+            <td style="text-align:center ">通道代码</td>
+            <td style="text-align:center ">开始运转时间</td>
+            <td style="text-align:center ">结束运转时间</td>
+        </tr>
+        {% for channel in Channel_list %}
+        <tr>
+            <th  style="text-align:center ">{{forloop.counter}}</th>
+            <td  style="text-align:center ">{{channel.Sta_ADSensor.Station.Network.Code}}</td>
+            <td  style="text-align:center ">{{channel.Sta_ADSensor.Station.Code}}</td>
+            <td  style="text-align:center;width:200px ">{{channel.Sta_ADSensor.ADSensor}}</td>
+            <td  style="text-align:center ">{{channel.Code_Loc}}</td>
+            <td  style="text-align:center "><a href="{% url 'networks:channel_detail' channel.id%}">{{channel.Code_CH}}</a></td>
+            <td  style="text-align:center ">{{channel.Start_Time}}</td>
+            <td  style="text-align:center ">{{channel.End_Time}}</td>
+
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No channel are available.</p>
+    {% endif %}
+{% endblock %}

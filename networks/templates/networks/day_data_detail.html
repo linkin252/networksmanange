@@ -1,0 +1,38 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>{{day_data_sel.ch.Sta_ADSensor.Station.Network.Code}}.{{day_data_sel.ch.Sta_ADSensor.Station.Code}}.
+        {{day_data_sel.ch.Code_Loc}}}.{{day_data_sel.ch.Code_CH}}-{{day_data_sel.date}} 数据表</title>{% endblock %}
+
+{% block mainbody %}
+    <tr style="text-align:center "><h3>通道名：{{day_data_sel.ch.Sta_ADSensor.Station.Network.Code}}.{{day_data_sel.ch.Sta_ADSensor.Station.Code}}.
+        {{day_data_sel.ch.Code_Loc}}.{{day_data_sel.ch.Code_CH}} 数据时间：{{day_data_sel.date}}</h3> </tr>
+    <tr style="text-align:center "><h3>台网名称：{{day_data_sel.ch.Sta_ADSensor.Station.Network.Name}} </h3> </tr>
+    <tr style="text-align:center "><h3>台站名称：{{day_data_sel.ch.Sta_ADSensor.Station.Name}} </h3> </tr>
+    <tr style="text-align:center "><h3>仪器： 数采型号 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.ADInfo.DigitizerRate.DigitizerGain.Digitizer.Name}} </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp采样速率 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.ADInfo.rate}}SPS </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp灵敏度 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.ADInfo.sensitivity}} Ct/V</h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp滤波器 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.ADInfo.Filter}} </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 传感器型号 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.SensorInfo1.Sensor.Name}} </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp频带- {{day_data_sel.ch.Sta_ADSensor.ADSensor.SensorInfo1.IFreqInfo}} </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp灵敏度 - {{day_data_sel.ch.Sta_ADSensor.ADSensor.SensorInfo1.ISensitivityInfo}} </h3> </tr>
+    <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 系统灵敏度 - {{day_data_sel.ch.Sta_ADSensor.ADSensor|getSystemSensitivityString}} </h3> </tr>
+
+
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 数据运行率：{{day_data_sel.runrate|floatformat:4}} </h3> </tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 24小时连续数据：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".day_wave.png" %}'  alt="数据文件未找到"/></tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 24小时低通滤波数据：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".day_wave.low_pass_0.2Hz.png" %}'  alt="数据文件未找到"/></tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 24小时高通滤波数据：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".day_wave.high_pass_0.2Hz.png" %}'  alt="数据文件未找到"/></tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 整日噪声谱分布图：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".ppsd.png" %}'  alt="数据文件未找到"/></tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 时刻-频谱能量分布图：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".spectrogram.png" %}'  alt="数据文件未找到"/></tr>
+    <tr style="text-align:center "><h3>{{day_data_sel.date}} 点频时刻-频谱能量分布图：</h3> </tr>
+    <tr style="text-align:center "><img src='{% static sDenDir|add:".1-2Hz.sp.png" %}'  alt="数据文件未找到"/></tr>
+
+{% endblock %}
+

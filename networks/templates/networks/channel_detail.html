@@ -1,0 +1,87 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_inst%}
+
+{% block titlebody %}<title>通道详细参数</title>{% endblock %}
+
+{% block mainbody %}
+    {% if channel %}
+        <h2>通道参数</h2>
+        <tr style="text-align:center "><h3>通道名：{{channel.Sta_ADSensor.Station.Network.Code}}.{{channel.Sta_ADSensor.Station.Code}}.
+            {{channel.Code_Loc}}.{{channel.Code_CH}} 数据时间：{{day_data_sel.date}}</h3> </tr>
+        <tr style="text-align:center "><h3>台网名称：{{channel.Sta_ADSensor.Station.Network.Name}} </h3> </tr>
+        <tr style="text-align:center "><h3>台站名称：{{channel.Sta_ADSensor.Station.Name}} </h3> </tr>
+        <tr style="text-align:center "><h3>仪器： 数采型号 - {{channel.Sta_ADSensor.ADSensor.ADInfo.DigitizerRate.DigitizerGain.Digitizer.Name}} </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp采样速率 - {{channel.Sta_ADSensor.ADSensor.ADInfo.rate}}SPS </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp灵敏度 - {{channel.Sta_ADSensor.ADSensor.ADInfo.sensitivity}} Ct/V</h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp滤波器 - {{channel.Sta_ADSensor.ADSensor.ADInfo.Filter}} </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 传感器型号 - {{channel.Sta_ADSensor.ADSensor.SensorInfo1.Sensor.Name}} </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp频带- {{channel.Sta_ADSensor.ADSensor.SensorInfo1.IFreqInfo}} </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp灵敏度 - {{channel.Sta_ADSensor.ADSensor.SensorInfo1.ISensitivityInfo}} </h3> </tr>
+        <tr style="text-align:center "><h3> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp 系统灵敏度 - {{channel.Sta_ADSensor.ADSensor|getSystemSensitivityString}} </h3> </tr>
+    {% endif %}
+
+    {% if sensorInfo %}
+        <h2>传感器参数</h2>
+        <tr style="text-align:center "><h3>传感器类型：{{sensor.Name}} </h3> </tr>
+        <h3>国家：{{sensorInfo.Sensor.ICompany.CNational.ChnName}}&nbsp&nbsp  厂家：{{sensorInfo.Sensor.ICompany.ChnName}}&nbsp&nbsp采集器型号：{{digitizer_sel.Name}}</h3>
+        <h3>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:零点数量={{sensorInfo.ZeroNum}}&nbsp&nbsp&nbsp&nbsp极点数量={{sensorInfo.PoleNum}}</h3>
+        {% if sensorInfo.ZeroNum != 0 or sensorInfo.PoleNum != 0 %}
+            <table><h4>
+                <style type="text/css">
+                table
+                {
+                    border-collapse :collapse ;
+                }
+                th,td
+                {
+                    border :1px solid black;
+                }
+                </style>
+                <tr>
+                    <td style="text-align:center;width:100px ">零极点类型</td>
+                    <td style="text-align:center;width:50px ">序号</td>
+                    <td style="text-align:center;width:200px ">零极点数值</td>
+                </tr>
+                {% if sensorInfo.ZeroNum != 0 %}
+                    {% for zero in  sensorInfo|getZero_list%}
+                        <tr>
+                            <td  style="text-align:center;width:100px   ">零点 </td>
+                            <td  style="text-align:center;width:50px   ">{{forloop.counter}} </td>
+                            <td  style="text-align:center;width:200px ">{{zero.sComplex}}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+                {% if sensorInfo.PoleNum != 0 %}
+                    {% for zero in  sensorInfo|getPole_list%}
+                        <tr>
+                            <td  style="text-align:center;width:100px   ">极点 </td>
+                            <td  style="text-align:center;width:100px   ">{{forloop.counter}} </td>
+                            <td  style="text-align:center;width:200px ">{{zero.sComplex}}</td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+                </h4> </table>
+        {% endif %}
+
+        <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".resp" %}'> RESP文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".xml" %}'> XML文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}:<a href='{% static sensorInfo.IParUrl|add:".dataless" %}'> Dataless文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}} 幅频相频响应图 </a></h4> </tr>
+        <tr style="text-align:center "><img src='{% static  sensorInfo.IParUrl|add:".freq_amp_phase.png" %}'  alt="响应图文件未找到"/></tr>
+        <tr style="text-align:center "><h4>频带：{{sensorInfo.IFreqInfo}} 灵敏度：{{sensorInfo.ISensitivityInfo}}: 系统理论脉冲响应图 </a></h4> </tr>
+        <tr style="text-align:center "><img src='{% static  sensorInfo.IParUrl|add:".impulse.png" %}'  alt="3响应图文件未找到"/></tr>
+    {% endif %}
+
+    {% if digitizer_filter %}
+        <h2>采集器参数</h2>
+        <h2>国家：{{digitizer_sel.ICompany.CNational.ChnName}}&nbsp&nbsp  厂家：{{digitizer_sel.ICompany.ChnName}}&nbsp&nbsp采集器型号：{{digitizer_sel.Name}}</h2>
+        <h2>采样信息：{{digitizer_filter.DigitizerRate.Rate}} 灵敏度信息：{{digitizer_filter.DigitizerRate.DigitizerGain.Gain}}滤波器：{{digitizer_filter.Filter}}</h2>
+        <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".resp" %}'> RESP文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".xml" %}'> XML文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}}<a href='{% static digitizer_filter.IParUrl|add:".dataless" %}'> Dataless文件</a></h4> </tr>
+        <tr style="text-align:center "><h4>采样速率：{{digitizer_filter.rate}}Hz 灵敏度：{{digitizer_filter.sensitivity}}Ct/V 滤波器：{{digitizer_filter.Filter}} 幅频响应图 </a></h4> </tr>
+        <tr style="text-align:center "><img src='{% static  digitizer_filter.IParUrl|add:".freq_amp.png" %}'  alt="响应图文件未找到"/></tr>
+    {% endif %}
+{% endblock %}
+

@@ -1,0 +1,30 @@
+{%extends "link.html" %}
+{%load static%}
+
+{% block titlebody %}<title>台站信息表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Station_list %}
+        <tr style="text-align:center "><h2>台站信息表</h2> </tr>
+        <tr>
+            <th style="text-align:center ">序号</th>
+            <td style="text-align:center ">台网代码</td>
+            <td style="text-align:center ">台站代码</td>
+            <td style="text-align:center ">台站名称</td>
+            <td style="text-align:center ">经度</td>
+            <td style="text-align:center ">纬度</td>
+        </tr>
+        {% for station in Station_list %}
+        <tr>
+            <th  style="text-align:center ">{{forloop.counter}}</th>
+            <td  style="text-align:center ">{{station.Network.Code}}</td>
+            <td  style="text-align:center ">{{station.Code}}</td>
+            <td  style="text-align:center ">{{station.Name}}</td>
+            <td  style="text-align:center ">{{station.fJin}}</td>
+            <td  style="text-align:center ">{{station.fWei}}</td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <p>No station are available.</p>
+    {% endif %}
+{% endblock %}

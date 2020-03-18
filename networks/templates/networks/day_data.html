@@ -1,0 +1,44 @@
+{%extends "link.html" %}
+{%load static%}
+{%load tag_net%}
+
+{% block titlebody %}<title>日数据表</title>{% endblock %}
+
+{% block mainbody %}
+    {% if Day_data_list %}
+        {% if Sel_Day %}
+            <tr style="text-align:center "><h2>日数据表({{Sel_Day}})</h2> </tr>
+        {% elif network_sel %}
+            <tr style="text-align:center "><h2>日数据表(台网={{network_sel.Code}})</h2> </tr>
+        {% elif station_sel %}
+            <tr style="text-align:center "><h2>日数据表(台站={{station_sel.Network.Code}}.{{station_sel.Code}})</h2> </tr>
+        {% elif channel_sel %}
+            <tr style="text-align:center "><h2>日数据表(通道={{channel_sel.Sta_ADSensor.Station.Network.Code}}.{{channel_sel.Sta_ADSensor.Station.Code}}.{{channel_sel.Code_Loc}}.{{channel_sel.Code_CH}})</h2> </tr>
+        {% else %}
+            <tr style="text-align:center "><h2>日数据表(全部)</h2> </tr>
+        {% endif %}
+            <tr>
+                <th style="text-align:center ">序号</th>
+                <td style="text-align:center ">数据时间</td>
+                <td style="text-align:center ">台网</td>
+                <td style="text-align:center ">台站</td>
+                <td style="text-align:center ">位置</td>
+                <td style="text-align:center ">通道</td>
+                <td style="text-align:center ">运行率</td>
+            </tr>
+            {% for day_data in Day_data_list %}
+            <tr>
+                <th  style="text-align:center ">{{forloop.counter}}</th>
+                <th  style="text-align:center "><a href="{% url 'networks:day_data_sel_date' day_data.date|date2int %}">{{day_data.date}}</a></th>
+                <td  style="text-align:center "><a href="{% url 'networks:day_data_sel_network' day_data.ch.Sta_ADSensor.Station.Network.id%}">{{day_data.ch.Sta_ADSensor.Station.Network.Code}}</a></td>
+                <td  style="text-align:center "><a href="{% url 'networks:day_data_sel_station' day_data.ch.Sta_ADSensor.Station.id%}">{{day_data.ch.Sta_ADSensor.Station.Code}}</a></td>
+                <td  style="text-align:center ">{{day_data.ch.Code_Loc}}</td>
+                <td  style="text-align:center "><a href="{% url 'networks:day_data_sel_channel' day_data.ch.id%}">{{day_data.ch.Code_CH}}</a></td>
+                <td  style="text-align:center "><a href="{% url 'networks:day_data_detail' day_data.id%}">{{day_data.runrate|floatformat:4}}</a></td>
+
+            </tr>
+            {% endfor %}
+    {% else %}
+        <p>No Day_data_list are available.</p>
+    {% endif %}
+{% endblock %}
