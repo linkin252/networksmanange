@@ -1,9 +1,6 @@
 # coding=utf-8
 
-import os
-import datetime
 import sqlite3
-import struct
 
 from trunk import calibrate
 
@@ -78,53 +75,10 @@ class DigitizerInfo:
         self.c = self.conn.cursor()
 
 
-def getCtime(path):
-    timestamp = os.path.getctime(path)
-    now = datetime.datetime.timestamp(datetime.datetime.now())
-    print('当前时间片：', now)
-
-def show_path(path, all_file, all_path):
-    dirlist = os.listdir(path)
-    for i in dirlist:
-        list = os.path.join(path, i)
-        if os.path.isdir(list):
-            show_path(list, all_file, all_path)
-        elif os.path.isfile(list):
-            all_file.append(os.path.basename(list))
-            all_path.append(os.path.abspath(list))
-    return all_file,all_path
-
-def newCalFile(all_path, inoutfiles):
-    now = datetime.datetime.timestamp(datetime.datetime.now())
-    for file in all_path:
-        # if os.path.getctime(file) >= now-10*60:
-        if len(file.split('.')) > 3:
-            demoname = 'Pulse_' + file.split('.')[-3] + '.png'
-            inoutfiles.append((file, os.path.join(os.path.dirname(file), demoname)))
-    return inoutfiles
-
-
 def main():
     # net = Network().create('TE', 'TE', 'D:/DJANGO', 'D/DJANGO', 3)
-    # sta = Station().create('T2867', 'T2867', 'TE')
-    all_file = []
-    all_path = []
-    inoutfiles = []
-    show_path('D:/django/trunk/cal_data', all_file, all_path)
-    newCalFile(all_path, inoutfiles)
-    print(inoutfiles)
+    sta = Station().create('T2867', 'T2867', 'TE')
 
-    f = open('da.par', 'rb')
-    bText = f.read(36)
-    rText = struct.unpack('2H12B4H8B2H', bText)
-    cal_input = rText[17]/32768*5-5
-
-    for infile, outfile in inoutfiles:
-        (cal_gain1, cal_gain2) = calibrate.addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
-        if (cal_gain1 == 0 and cal_gain2 == 0):
-            print('Calibration Calculate Error!')
-        else:
-            print('Calibration Calculate OK!')
 
 if __name__ == "__main__":
     SQL_PATH = 'D:/django/trunk/db.sqlite3'
