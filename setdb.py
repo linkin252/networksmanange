@@ -3,6 +3,7 @@
 import os
 import datetime
 import sqlite3
+import struct
 
 from trunk import calibrate
 
@@ -108,18 +109,16 @@ def main():
     # sta = Station().create('T2867', 'T2867', 'TE')
     all_file = []
     all_path = []
-    infiles = []
-    outfiles = []
     inoutfiles = []
     show_path('D:/django/trunk/cal_data', all_file, all_path)
     newCalFile(all_path, inoutfiles)
     print(inoutfiles)
 
-    nNetMode = 'V'
-    nCalMode = 'A'
-    cal_stvt = float(10.)  # 10m/s**2/V or 10m/s**2/A
-    cal_input = float(0.001)  # 0.001A or 0.001V
-    ad_stvt = float(1258290)  # 1258290 Ct/V
+    f = open('da.par', 'rb')
+    bText = f.read(36)
+    rText = struct.unpack('2H12B4H8B2H', bText)
+    cal_input = rText[17]/32768*5-5
+
     for infile, outfile in inoutfiles:
         (cal_gain1, cal_gain2) = calibrate.addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
         if (cal_gain1 == 0 and cal_gain2 == 0):

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+import configparser
 import os
+import datetime
+import struct
+import re
 import platform
-
 import math
 import obspy
-import datetime
 from array import array
 from matplotlib.font_manager import FontProperties #字体管理器
 import matplotlib as mpl
@@ -14,6 +16,7 @@ mpl.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
 plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
 
 import numpy as np
+import sys, getopt
 
 def get_median(data):
     data.sort()
@@ -496,62 +499,124 @@ def addCalPulse(infile,outfile,pulse_input,cal_stvt,ad_stvt,nNetMode='V',nCalMod
         print(cal_time,cal_gain1,cal_gain2)
     return (cal_gain1,cal_gain2)
 
-import sys, getopt
-def main(argv):
-    infile = 'TD.T2867.40.EIE.D.20190191'
-    outfile = 'demo.png'
+
+def getCtime(path):
+    timestamp = os.path.getctime(path)
+    now = datetime.datetime.timestamp(datetime.datetime.now())
+    print('当前时间片：', now)
+
+def show_path(path, all_file, all_path):
+    dirlist = os.listdir(path)
+    for i in dirlist:
+        list = os.path.join(path, i)
+        if os.path.isdir(list):
+            show_path(list, all_file, all_path)
+        elif os.path.isfile(list):
+            all_file.append(os.path.basename(list))
+            all_path.append(os.path.abspath(list))
+    return all_file,all_path
+
+def newCalFile(all_path, inoutfiles):
+    now = datetime.datetime.timestamp(datetime.datetime.now())
+    for file in all_path:
+        # if os.path.getctime(file) >= now-10*60:
+        if len(file.split('.')) > 3:
+            demoname = 'Pulse_' + file.split('.')[-3] + '.png'
+            inoutfiles.append((file, os.path.join(os.path.dirname(file), demoname), file.split('.')[-3]))
+    return inoutfiles
+
+
+def chnMatch(path, chn_list):
+    cf = configparser.ConfigParser()
+    cf.read(path)
+    chn = [['CHN0_CODE', 'CHN0_TYPE'], ['CHN1_CODE', 'CHN1_TYPE'], ['CHN2_CODE', 'CHN2_TYPE'],
+           ['CHN3_CODE', 'CHN3_TYPE'], ['CHN4_CODE', 'CHN4_TYPE'], ['CHN5_CODE', 'CHN5_TYPE']]
+    if cf.getint('PI_PAR', 'CHN_NUM') == 3:
+        for i in range(0, 3):
+            if cf.getint('PI_PAR', chn[i][1]) == 1:
+                chn[i].append('V')
+            elif cf.getint('PI_PAR', chn[i][1]) == 2:
+                chn[i].append('A')
+            chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
+    elif cf.getint('PI_PAR', 'CHN_NUM') == 6:
+        for i in range(0, 6):
+            if cf.getint('PI_PAR', chn[i][1]) == 1:
+                chn[i].append('V')
+            elif cf.getint('PI_PAR', chn[i][1]) == 2:
+                chn[i].append('A')
+            chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
+
+
+def senMatch(path,chn_list):
+    f = open(path, 'r')
+    for readline in f.readlines():
+        if 'SENSOR0_PULSE' in readline:
+            for i in range(0, 3):
+                chn_list[i].append(re.split("=|\n", readline)[1])
+        if 'SENSOR1_PULSE' in readline and len(chn_list) > 3:
+            for i in range(3, 6):
+                chn_list[i].append(re.split("=|\n", readline)[1])
+        if 'CH0_CA' in readline:
+            chn_list[0].append(float(readline.split(',')[1]))
+        if 'CH1_CA' in readline:
+            chn_list[1].append(float(readline.split(',')[1]))
+        if 'CH2_CA' in readline:
+            chn_list[2].append(float(readline.split(',')[1]))
+        if len(chn_list) > 3:
+            if 'CH3_CA' in readline:
+                chn_list[3].append(float(readline.split(',')[1]))
+            if 'CH4_CA' in readline:
+                chn_list[4].append(float(readline.split(',')[1]))
+            if 'CH5_CA' in readline:
+                chn_list[5].append(float(readline.split(',')[1]))
+
+
+def addCalInput(path, chn_list):
+    f = open(path, 'rb')
+    bText1 = f.read(36)
+    rText1 = struct.unpack('2H12B4H8B2H', bText1)
+    cal_input = rText1[17]/32768*5-5
+    f.seek(512)
+    bText2 = f.read(36)
+    rText2 = struct.unpack('2H12B4H8B2H', bText2)
+    cal_input2 = rText2[17]/32768*5-5
+    for i in range(len(chn_list)):
+        if i < 3:
+            chn_list[i].append(cal_input)
+        if i >= 3:
+            chn_list[i].append(cal_input2)
+
+
+def main():
     nNetMode = 'V'
     nCalMode = 'A'
-    cal_stvt = float(10.)     # 10m/s**2/V or 10m/s**2/A
+    cal_stvt = float(10.)  # 10m/s**2/V or 10m/s**2/A
     cal_input = float(0.001)  # 0.001A or 0.001V
     ad_stvt = float(1258290)  # 1258290 Ct/V
 
-    try:
-        opts, args = getopt.getopt(argv,"hi:o:s:c:p:a:d:",["ifile=","ofile=","sensor","cal_mode","cal_input","cal_stvt","ad_stvt"])
-    except getopt.GetoptError:
-        print('python calibrate.py -s <seismometer/accelerometer> -c <Amp/Volt> -a <float cal_stvt> -p <float cal_input) -d <float ad_stvt> -i <inputfile> -o <outputfile>  ')
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ('-h','--help'):
-            print('calibrate.py -s <seismometer/accelerometer> -c <Amp/Volt> -a <float cal_stvt> -p <float cal_input) -d <float ad_stvt> -i <inputfile> -o <outputfile>  ')
-            sys.exit()
-        elif opt in ("-i", "--ifile"):
-            infile = arg
-        elif opt in ("-o", "--ofile"):
-            outfile = arg
-            filetype = outfile.split('.')[-1]
-            if (filetype!='png' and filetype!='pdf'):
-                outfile += '.png'
-        elif opt in ("-s", '--sensor'):
-            if (arg[0]=='a' or arg[0] == 'A'):
-                nNetMode = 'A'
-        elif opt in ("-c", '--cal_mode'):
-            if (arg[0]=='v' or arg[0] == 'V'):
-                nCalMode = 'V'
-        elif opt in ('-p', '--cal_input'):
-            cal_input = float(arg)
-        elif opt in ('-a', '--cal_stvt'):
-            cal_stvt = float(arg)
-        elif opt in ('-d', '--ad_stvt'):
-            ad_stvt = float(arg)
+    all_file = []
+    all_path = []
+    inoutfiles = []
+    chn_list = []
+    show_path('D:/django/trunk/cal_data', all_file, all_path)
+    newCalFile(all_path, inoutfiles)
+    # print(inoutfiles)
 
-    print('input file:  %s' % infile)
-    print('output file: %s' % outfile)
-    if (nNetMode =='A'):
-        print('sensor mode: accelerometer')
-    else:
-        print('sensor mode: seismometer')
-    if (nCalMode=='V'):
-        print('Calibration mode: Voltage Mode')
-    else:
-        print('Calibration mode: Current Mode')
-    print('Cal Input=%f%s. Cal Sensitivity=%fm/s**2/%s, Digitizer Sensitivity=%fCt/V' %(cal_input,nCalMode,cal_stvt,nCalMode,ad_stvt))
-    (cal_gain1,cal_gain2) = addCalPulse(infile,outfile,cal_input,cal_stvt,ad_stvt,nNetMode,nCalMode)
+    chnMatch('pi.ini', chn_list)
+    senMatch('response.ini', chn_list)
+    addCalInput('da.par', chn_list)
 
-    if (cal_gain1==0 and cal_gain2==0):
-        print('Calibration Calculate Error!')
-    else:
-        print('Calibration Calculate OK!')
+    for infile, outfile, chnName in inoutfiles:
+        for par in chn_list:
+            if chnName in par:
+                nNetMode, nCalMode, cal_stvt, cal_input = par[1], par[2], par[3], par[4]
+                print(infile, outfile, nNetMode, nCalMode, cal_stvt, cal_input)
+                (cal_gain1, cal_gain2) = addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
+                if (cal_gain1 == 0 and cal_gain2 == 0):
+                    print('Calibration Calculate Error!')
+                else:
+                    print('Calibration Calculate OK!')
+
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main()

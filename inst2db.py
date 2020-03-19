@@ -47,7 +47,7 @@ def AddNationalFirst():
                 oldNational[0].save()
         else:
             print(line, " has only", num, ',  we need at least 4 !')
-            continue;
+            continue
 
     f.close()
     print(National.objects.all())
@@ -128,7 +128,7 @@ def AddCompanyFirst():
                 print("National=%s is not existed, cann't add!", national)
         else:
             print(line, " has only", num, ',  we need at least 3 !')
-            continue;
+            continue
     f.close()
     print(Company.objects.all())
 
@@ -573,7 +573,7 @@ def FindDigitizerFirst(Name = 'all'):
                     for ListV in ListV_title:
                         Index = info0.index(ListV)
                         if (Index>nIndexMax):
-                            nIndexMax = Index;
+                            nIndexMax = Index
                         listV_index.append(Index)
                         #print(listV_index)
 
