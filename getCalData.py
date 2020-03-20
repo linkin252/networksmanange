@@ -500,11 +500,6 @@ def addCalPulse(infile,outfile,pulse_input,cal_stvt,ad_stvt,nNetMode='V',nCalMod
     return (cal_gain1,cal_gain2)
 
 
-def getCtime(path):
-    timestamp = os.path.getctime(path)
-    now = datetime.datetime.timestamp(datetime.datetime.now())
-    print('当前时间片：', now)
-
 def show_path(path, all_file, all_path):
     dirlist = os.listdir(path)
     for i in dirlist:
@@ -516,13 +511,14 @@ def show_path(path, all_file, all_path):
             all_path.append(os.path.abspath(list))
     return all_file,all_path
 
+
 def newCalFile(all_path, inoutfiles):
     now = datetime.datetime.timestamp(datetime.datetime.now())
     for file in all_path:
-        # if os.path.getctime(file) >= now-10*60:
-        if len(file.split('.')) > 3:
-            demoname = 'Pulse_' + file.split('.')[-3] + '.png'
-            inoutfiles.append((file, os.path.join(os.path.dirname(file), demoname), file.split('.')[-3]))
+        if os.path.getctime(file) >= now-10*60:
+            if len(file.split('.')) > 3:
+                demoname = 'Pulse_' + file.split('.')[-3] + '.png'
+                inoutfiles.append((file, os.path.join(os.path.dirname(file), demoname), file.split('.')[-3]))
     return inoutfiles
 
 
@@ -587,35 +583,69 @@ def addCalInput(path, chn_list):
             chn_list[i].append(cal_input2)
 
 
+def getCiPar(path, chn_list):
+    ad_ctvt_ci = ad_ctvt_fi = 1677721.6
+    Gain_list = ((0, 1), (1, 2), (2, 4), (3, 8), (4, 16), (5, 32), (6, 64))
+    f = open(path, 'rb')
+    bText = f.read(26)
+    rText = struct.unpack('2H8B7s7B', bText)
+    nGain = rText[17]
+    nGain_CI = nGain & 15
+    nGain_FI = nGain >> 4
+    for iGain in Gain_list:
+        if nGain_CI == iGain[0]:
+            ad_ctvt_ci = 1677721.6/iGain[1]
+        if nGain_FI == iGain[0]:
+            ad_ctvt_fi = 1677721.6/iGain[1]
+    for i in range(len(chn_list)):
+        if i < 3:
+            chn_list[i].append(ad_ctvt_ci)
+        if i >= 3:
+            chn_list[i].append(ad_ctvt_fi)
+
+
 def main():
     nNetMode = 'V'
     nCalMode = 'A'
     cal_stvt = float(10.)  # 10m/s**2/V or 10m/s**2/A
     cal_input = float(0.001)  # 0.001A or 0.001V
     ad_stvt = float(1258290)  # 1258290 Ct/V
-
     all_file = []
     all_path = []
     inoutfiles = []
     chn_list = []
-    show_path('D:/django/trunk/cal_data', all_file, all_path)
+    cal_path = 'D:/django/trunk/cal_data'
+    pi_path = 'pi.ini'
+    response_path = 'response.ini'
+    da_path = 'da.par'
+    ci_path = 'ci.par'
+
+    sys = platform.system()
+    if sys == 'Linux':
+        cal_path = '/home/usrdata/usb/log/cal'
+        pi_path = '/home/usrdata/pi/tde/params/pi.ini'
+        response_path = '/home/usrdata/pi/tde/params/response.ini'
+        da_path = '/home/usrdata/pi/tde/params/da.par'
+        ci_path = '/home/usrdata/pi/tde/params/ci.par'
+
+    show_path(cal_path, all_file, all_path)
     newCalFile(all_path, inoutfiles)
-    # print(inoutfiles)
+    chnMatch(pi_path, chn_list)
+    senMatch(response_path, chn_list)
+    addCalInput(da_path, chn_list)
+    getCiPar(ci_path, chn_list)
 
-    chnMatch('pi.ini', chn_list)
-    senMatch('response.ini', chn_list)
-    addCalInput('da.par', chn_list)
-
-    for infile, outfile, chnName in inoutfiles:
-        for par in chn_list:
-            if chnName in par:
-                nNetMode, nCalMode, cal_stvt, cal_input = par[1], par[2], par[3], par[4]
-                print(infile, outfile, nNetMode, nCalMode, cal_stvt, cal_input)
-                (cal_gain1, cal_gain2) = addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
-                if (cal_gain1 == 0 and cal_gain2 == 0):
-                    print('Calibration Calculate Error!')
-                else:
-                    print('Calibration Calculate OK!')
+    if len(inoutfiles) > 0:
+        for infile, outfile, chnName in inoutfiles:
+            for par in chn_list:
+                if chnName in par:
+                    nNetMode, nCalMode, cal_stvt, cal_input, ad_stvt = par[1], par[2], par[3], par[4], par[5]
+                    print(infile, outfile, nNetMode, nCalMode, cal_stvt, cal_input, ad_stvt)
+                    (cal_gain1, cal_gain2) = addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
+                    if (cal_gain1 == 0 and cal_gain2 == 0):
+                        print('Calibration Calculate Error!')
+                    else:
+                        print('Calibration Calculate OK!')
 
 
 if __name__ == "__main__":

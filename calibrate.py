@@ -498,13 +498,13 @@ def addCalPulse(infile,outfile,pulse_input,cal_stvt,ad_stvt,nNetMode='V',nCalMod
 
 import sys, getopt
 def main(argv):
-    infile = 'TD.T2867.40.EIE.D.20190191'
+    infile = 'TD.STA40.00.BHE.D.20200320091312'
     outfile = 'demo.png'
     nNetMode = 'V'
     nCalMode = 'A'
     cal_stvt = float(10.)     # 10m/s**2/V or 10m/s**2/A
-    cal_input = float(0.001)  # 0.001A or 0.001V
-    ad_stvt = float(1258290)  # 1258290 Ct/V
+    cal_input = float(1.999969482421875)  # 0.001A or 0.001V
+    ad_stvt = float(1677721.6)  # 1258290 Ct/V
 
     try:
         opts, args = getopt.getopt(argv,"hi:o:s:c:p:a:d:",["ifile=","ofile=","sensor","cal_mode","cal_input","cal_stvt","ad_stvt"])
