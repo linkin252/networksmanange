@@ -45,9 +45,6 @@ def newCalFile(ini_path, all_path, inoutfiles):
                 min_time = mtime
     if min_time != 4102415999:
         cf.set('TIME_START', 'timestamp', str(min_time))
-            # if del_flag:
-            #     cf.remove_section(calName)
-            #     del_flag = False
     cf.write(open(ini_path, 'w'))
 
 
