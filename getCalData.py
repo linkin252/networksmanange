@@ -513,44 +513,45 @@ def show_path(path, all_file, all_path):
 
 
 def newCalFile(ini_path, all_path, inoutfiles):
-    del_flag = False
-    min_time = 4102415999 #2099-12-31 23:59:59
-    max_time = 0
+    maxtime_name = [0]  # 完整的原始数据的最大修改时间和目录名
+    min_time = 4102415999  # 2099-12-31 23:59:59  # 更新的原始数据中最小的修改时间
     if not os.path.exists(ini_path):
         open(ini_path, 'w')
     cf = configparser.ConfigParser()
     cf.read(ini_path)
-    start_time = cf.getfloat('TIME_START', 'timestamp')
+    start_time = cf.getfloat('TIME_START', 'timestamp')  # 起始判断时间
     for file in all_path:
-        mtime = os.path.getmtime(file)
-        if len(file.split('.')) > 3 and mtime >= start_time:
+        mTime = os.path.getmtime(file)  # 获取各个文件的修改时间
+        if len(file.split('.')) > 3 and mTime >= start_time:
             calName = file.split('.')[-1]
             chnName = file.split('.')[-3]
             if cf.has_option(calName, chnName):
-                if cf.getfloat(calName, chnName) == mtime:
+                if cf.getfloat(calName, chnName) == mTime:  # 前10分钟和前20分钟的修改时间一致，说明数据已完整
                     outfile = 'Pulse_' + chnName + '.png'
                     inoutfiles.append((file, os.path.join(os.path.dirname(file), outfile), chnName))
                     cf.remove_option(calName, chnName)
-                    if mtime >= max_time:
-                        max_time = mtime
+                    if calName not in maxtime_name:
+                        maxtime_name.append(calName)
+                    if mTime >= maxtime_name[0]:
+                        maxtime_name[0] = mTime
                     continue
-            if not cf.has_section(calName):
+            if not cf.has_section(calName):  # 增加前10分钟获取的新数据的修改时间
                 cf.add_section(calName)
                 if not cf.has_option(calName, chnName):
-                    cf.set(calName, chnName, str(mtime))
+                    cf.set(calName, chnName, str(mTime))
             else:
                 if not cf.has_option(calName, chnName):
-                    cf.set(calName, chnName, str(mtime))
-            cf.set(calName, chnName, str(mtime))
-            if mtime < min_time:
-                min_time = mtime
-    if max_time != 0 and min_time == 4102415999: # 有产出，无更新
-        cf.set('TIME_START', 'timestamp', str(datetime.datetime.timestamp(datetime.datetime.now())))  # 起始判断时间设为当前时间
-    if min_time != 4102415999:
+                    cf.set(calName, chnName, str(mTime))
+            cf.set(calName, chnName, str(mTime))  # 更新前10分钟更新的数据的修改时间
+            if mTime < min_time:  # 获取更新数据的最小修改时间
+                min_time = mTime
+    if maxtime_name[0] != 0:  # 有产出，无更新
+        for cname in maxtime_name[1:]:
+            cf.remove_section(cname)
+        if min_time == 4102415999:
+            cf.set('TIME_START', 'timestamp', str(datetime.datetime.timestamp(datetime.datetime.now())))  # 起始判断时间设为当前时间
+    if min_time != 4102415999:  # 有更新，设置起始判断时间为最小更新时间
         cf.set('TIME_START', 'timestamp', str(min_time))
-            # if del_flag:
-            #     cf.remove_section(calName)
-            #     del_flag = False
     cf.write(open(ini_path, 'w'))
 
 
@@ -691,14 +692,17 @@ def main():
     getCiPar(ci_path, chn_list)
 
     if len(inoutfiles) > 0:
+        print('\n\n' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+              '-------------------------------------------------------------------')
         for infile, outfile, chnName in inoutfiles:
             for par in chn_list:
                 if chnName in par:
                     nNetMode, nCalMode, cal_stvt, cal_input, ad_stvt = par[1], par[2], par[3], par[4], par[5]
                     print(infile, outfile, nNetMode, nCalMode, cal_stvt, cal_input, ad_stvt)
                     (cal_gain1, cal_gain2) = addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
-                    if (cal_gain1 == 0 and cal_gain2 == 0):
+                    if cal_gain1 == 0 and cal_gain2 == 0:
                         print('Calibration Calculate Error!')
+                        os.remove(outfile)
                     else:
                         print('Calibration Calculate OK!')
 

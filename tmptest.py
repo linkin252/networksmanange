@@ -5,6 +5,7 @@ import configparser
 import re
 import struct
 
+
 def chnMatch(path, chn_list):
     cf = configparser.ConfigParser()
     cf.read(path)
@@ -26,7 +27,7 @@ def chnMatch(path, chn_list):
             chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
 
 
-def senMatch(path,chn_list):
+def senMatch(path, chn_list):
     f = open(path, 'r')
     for readline in f.readlines():
         if 'SENSOR0_PULSE' in readline:
@@ -65,6 +66,7 @@ def addCalInput(chn_list):
         if i >= 3:
             chn_list[i].append(cal_input2)
 
+
 def getCiPar(path, chn_list):
     ad_ctvt_ci = ad_ctvt_fi = 1677721.6
     Gain_list = ((0, 1), (1, 2), (2, 4), (3, 8), (4, 16), (5, 32), (6, 64))
@@ -78,12 +80,12 @@ def getCiPar(path, chn_list):
     nGain_CI = nGain & 15
     nGain_FI = nGain >> 4
     for iGain in Gain_list:
-        if nCommRate == 0: #26位
+        if nCommRate == 0:  # 26位
             if nGain_CI == iGain[0]:
                 ad_ctvt_ci = 1677721.6/iGain[1]
             if nGain_FI == iGain[0]:
                 ad_ctvt_fi = 1677721.6/iGain[1]
-        elif nCommRate == 1: #24位
+        elif nCommRate == 1:  # 24位
             if nGain_CI == iGain[0]:
                 ad_ctvt_ci = 419430.4/iGain[1]
             if nGain_FI == iGain[0]:
