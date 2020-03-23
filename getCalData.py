@@ -515,6 +515,7 @@ def show_path(path, all_file, all_path):
 def newCalFile(ini_path, all_path, inoutfiles):
     del_flag = False
     min_time = 4102415999 #2099-12-31 23:59:59
+    max_time = 0
     if not os.path.exists(ini_path):
         open(ini_path, 'w')
     cf = configparser.ConfigParser()
@@ -530,9 +531,8 @@ def newCalFile(ini_path, all_path, inoutfiles):
                     outfile = 'Pulse_' + chnName + '.png'
                     inoutfiles.append((file, os.path.join(os.path.dirname(file), outfile), chnName))
                     cf.remove_option(calName, chnName)
-                    if mtime >= start_time:
-                        start_time = mtime
-                        print(mtime)
+                    if mtime >= max_time:
+                        max_time = mtime
                     continue
             if not cf.has_section(calName):
                 cf.add_section(calName)
@@ -544,6 +544,8 @@ def newCalFile(ini_path, all_path, inoutfiles):
             cf.set(calName, chnName, str(mtime))
             if mtime < min_time:
                 min_time = mtime
+    if max_time != 0 and min_time == 4102415999: # 有产出，无更新
+        cf.set('TIME_START', 'timestamp', str(datetime.datetime.timestamp(datetime.datetime.now())))  # 起始判断时间设为当前时间
     if min_time != 4102415999:
         cf.set('TIME_START', 'timestamp', str(min_time))
             # if del_flag:
@@ -559,7 +561,7 @@ def timeInit(ini_path):
     if not cf.has_section('TIME_START'):
         cf.add_section('TIME_START')
     if not cf.has_option('TIME_START', 'timestamp'):
-        cf.set('TIME_START', 'timestamp', str(now - 60))
+        cf.set('TIME_START', 'timestamp', str(now - 600))
         cf.write(open(ini_path, 'w'))
 
 
