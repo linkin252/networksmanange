@@ -530,6 +530,9 @@ def newCalFile(ini_path, all_path, inoutfiles):
                     outfile = 'Pulse_' + chnName + '.png'
                     inoutfiles.append((file, os.path.join(os.path.dirname(file), outfile), chnName))
                     cf.remove_option(calName, chnName)
+                    if mtime >= start_time:
+                        start_time = mtime
+                        print(mtime)
                     continue
             if not cf.has_section(calName):
                 cf.add_section(calName)
@@ -627,14 +630,23 @@ def getCiPar(path, chn_list):
     f = open(path, 'rb')
     bText = f.read(26)
     rText = struct.unpack('2H8B7s7B', bText)
+    # 采样位数
+    nCommRate = rText[16] >> 4
+    # AD增益
     nGain = rText[17]
     nGain_CI = nGain & 15
     nGain_FI = nGain >> 4
     for iGain in Gain_list:
-        if nGain_CI == iGain[0]:
-            ad_ctvt_ci = 1677721.6/iGain[1]
-        if nGain_FI == iGain[0]:
-            ad_ctvt_fi = 1677721.6/iGain[1]
+        if nCommRate == 0: #26位
+            if nGain_CI == iGain[0]:
+                ad_ctvt_ci = 1677721.6/iGain[1]
+            if nGain_FI == iGain[0]:
+                ad_ctvt_fi = 1677721.6/iGain[1]
+        elif nCommRate == 1: #24位
+            if nGain_CI == iGain[0]:
+                ad_ctvt_ci = 419430.4/iGain[1]
+            if nGain_FI == iGain[0]:
+                ad_ctvt_fi = 419430.4/iGain[1]
     for i in range(len(chn_list)):
         if i < 3:
             chn_list[i].append(ad_ctvt_ci)
