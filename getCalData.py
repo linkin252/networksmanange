@@ -513,7 +513,7 @@ def show_path(path, all_file, all_path):
 
 
 def newCalFile(ini_path, all_path, inoutfiles):
-    maxtime_name = [0]  # 完整的原始数据的最大修改时间和目录名
+    maxTime_name = [0]  # 完整的原始数据的最大修改时间和目录名
     min_time = 4102415999  # 2099-12-31 23:59:59  # 更新的原始数据中最小的修改时间
     if not os.path.exists(ini_path):
         open(ini_path, 'w')
@@ -530,10 +530,10 @@ def newCalFile(ini_path, all_path, inoutfiles):
                     outfile = 'Pulse_' + chnName + '.png'
                     inoutfiles.append((file, os.path.join(os.path.dirname(file), outfile), chnName))
                     cf.remove_option(calName, chnName)
-                    if calName not in maxtime_name:
-                        maxtime_name.append(calName)
-                    if mTime >= maxtime_name[0]:
-                        maxtime_name[0] = mTime
+                    if calName not in maxTime_name:
+                        maxTime_name.append(calName)
+                    if mTime >= maxTime_name[0]:
+                        maxTime_name[0] = mTime
                     continue
             if not cf.has_section(calName):  # 增加前10分钟获取的新数据的修改时间
                 cf.add_section(calName)
@@ -545,8 +545,8 @@ def newCalFile(ini_path, all_path, inoutfiles):
             cf.set(calName, chnName, str(mTime))  # 更新前10分钟更新的数据的修改时间
             if mTime < min_time:  # 获取更新数据的最小修改时间
                 min_time = mTime
-    if maxtime_name[0] != 0:  # 有产出，无更新
-        for cname in maxtime_name[1:]:
+    if maxTime_name[0] != 0:  # 有产出，无更新
+        for cname in maxTime_name[1:]:
             cf.remove_section(cname)
         if min_time == 4102415999:
             cf.set('TIME_START', 'timestamp', str(datetime.datetime.timestamp(datetime.datetime.now())))  # 起始判断时间设为当前时间
@@ -702,7 +702,8 @@ def main():
                     (cal_gain1, cal_gain2) = addCalPulse(infile, outfile, cal_input, cal_stvt, ad_stvt, nNetMode, nCalMode)
                     if cal_gain1 == 0 and cal_gain2 == 0:
                         print('Calibration Calculate Error!')
-                        os.remove(outfile)
+                        if os.path.exists(outfile):
+                            os.remove(outfile)
                     else:
                         print('Calibration Calculate OK!')
 

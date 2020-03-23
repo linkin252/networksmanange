@@ -4,7 +4,9 @@ import os
 import configparser
 import re
 import struct
+import platform
 
+PLATFORM = platform.system()
 
 def chnMatch(path, chn_list):
     cf = configparser.ConfigParser()
@@ -103,5 +105,6 @@ senMatch('response.ini', chn_list)
 addCalInput(chn_list)
 getCiPar('ci.par', chn_list)
 print(chn_list)
-
+if os.path.exists('caltime.ini'):
+    os.remove('caltime.ini')
 

@@ -1,9 +1,10 @@
 import os
 import datetime
+import platform
 from instruments.models import National, Company, Sensor_base, Sensor_info, Digitizer_base,\
     Digitizer_gain,Digitizer_rate,Digitizer_filter,Zero,Pole,AD_Sensor
 from networks.models import Network,Station,Channel,Sta_ADSensor,Day_data
-import datetime
+
 
 #mode = 0 ， 存在返回True，如果目录不存在则创建目录，并返回 False
 #mode = 1，  存在返回True，如果不存在则创建文件，并返回 False
@@ -191,7 +192,7 @@ def countDay_1OfYear(now):
 
 def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
     # 建立顶层根目录
-    STATIC_PATH = os.path.join('/home/usb/django/taide', 'static')
+    STATIC_PATH = os.path.join(os.path.dirname(__file__), 'static')
     sDenDir = 'networks'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
@@ -322,10 +323,11 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
             print(file , "Name is error.")
 
 def Net2dbDemo(sensortype):
-    addNetDemo("/home/usrdata/usb/data",3,sensortype)
-    addNetDemo("/home/usrdata/usb/mondata",3,sensortype)
-    for ch in Channel.objects.order_by('id'):
-        print(ch)
+    if platform.system() == 'Windows':
+        addNetDemo("D:\\LK\\86.40新镜像程序\\TD.STA40", 3, sensortype)
+    elif platform.system() == 'Linux':
+        addNetDemo("/home/usrdata/usb/data",3,sensortype)
+        addNetDemo("/home/usrdata/usb/mondata",3,sensortype)
 
 def getStaticStr():
     return os.path.join(os.path.dirname(__file__), 'static')

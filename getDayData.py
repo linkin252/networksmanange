@@ -2,8 +2,12 @@
 
 import os, sys
 import django
+import platform
 
-sys.path.append('/home/usb/django/taide')
+if platform.platform() == 'Windows':
+    sys.path.append('D:/django/trunk')
+else:
+    sys.path.append('/home/usb/django/taide')
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "taide.settings")  # NoQA
 django.setup()  # NoQA
 
@@ -32,7 +36,7 @@ def delChnByNet(network):
 def delStaAdSenByNet(network):
     num = 0
     for sta_adsensor in Sta_ADSensor.objects.order_by('id'):
-        if sta_adsensor.Station.Network.__str__() == network:
+        if sta_adsensor.Station.Network == network:
             Sta_ADSensor.objects.filter(id=sta_adsensor.id).delete()
             num += 1
     print('删除了%s台网中的%d个台站仪器组' % (network, num))
