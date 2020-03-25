@@ -69,6 +69,18 @@ class Station:
         return sta
 
 
+class DeleteSql:
+    def __init__(self):
+        self.conn = sqlite3.connect(SQL_PATH)
+        self.c = self.conn.cursor()
+
+    def delTable(self, table):
+        sql = 'DROP TABLE %s' % table
+        print(sql)
+        self.c.execute(sql)
+        self.conn.commit()
+
+
 class DigitizerInfo:
     def __init__(self, Name, Gain, Rate, Filter):
         self.conn = sqlite3.connect(SQL_PATH)
@@ -77,7 +89,8 @@ class DigitizerInfo:
 
 def main():
     # net = Network().create('TE', 'TE', 'D:/DJANGO', 'D/DJANGO', 3)
-    sta = Station().create('T2867', 'T2867', 'TE')
+    # sta = Station().create('T2867', 'T2867', 'TE')
+    DeleteSql().delTable('networks_day_data')
 
 
 if __name__ == "__main__":

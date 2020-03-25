@@ -159,8 +159,11 @@ def getFE(fSrc,nMaxId):
     maxSrcId = np.argmax(fSrc_ha)
     while (np.abs(nMaxId-maxSrcId)>3):
         maxSrcId = np.argmax(fSrc_ha)
-        print(maxSrcId,nMaxId)
+        # print(maxSrcId,nMaxId)
         fSrc_ha[maxSrcId] = 0
+        if maxSrcId == 0:
+            print('maxSrcId = %d,exit loop' % maxSrcId)
+            break
     #1.4 获取主频旁瓣和三次谐波的能量加和
     fSrc_e = 0.
     for k in range(1,4):

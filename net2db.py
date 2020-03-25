@@ -164,7 +164,9 @@ def get_or_create_Sta_ADSensor(sta,ADSensor):
 def get_or_create_CH(StaADSensor,LocCode, ChCode):
     try:
         ch = Channel.objects.get(Sta_ADSensor=StaADSensor, Code_Loc=LocCode, Code_CH=ChCode)
-    except Channel.DoesNotExist:
+    # except Channel.DoesNotExist:
+    except Exception as ex:
+        print(ex)
         StartTime = datetime.date.today()
         EndTime = datetime.date(2099, 1, 1)
         ch = Channel.objects.create(Sta_ADSensor=StaADSensor, Code_Loc=LocCode, Code_CH=ChCode,
@@ -324,7 +326,10 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
 
 def Net2dbDemo(sensortype):
     if platform.system() == 'Windows':
-        addNetDemo("D:\\LK\\86.40新镜像程序\\TD.STA40", 3, sensortype)
+        if os.path.exists('D:\\LK\\86.40新镜像程序\\TD.STA40'):
+            addNetDemo("D:\\LK\\86.40新镜像程序\\TD.STA40", 3, sensortype)
+        else:
+            addNetDemo("E:\\文件\\86.40新镜像程序\\TD.STA40", 3, sensortype)
     elif platform.system() == 'Linux':
         addNetDemo("/home/usrdata/usb/data",3,sensortype)
         addNetDemo("/home/usrdata/usb/mondata",3,sensortype)
