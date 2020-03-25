@@ -9,7 +9,7 @@ class Network:
         try:
             self.conn = sqlite3.connect(SQL_PATH)
         except Exception as ex:
-            print('sql not connect')
+            print(ex)
         else:
             self.c = self.conn.cursor()
 
@@ -24,14 +24,14 @@ class Network:
         self.conn.close()
         return val
 
-    def getId(self, field, value):
+    def getId(self, field_des, field_res, value):
         netId = 0
-        sql = "SELECT id, %s from networks_network" % field
+        if type(value) == 'int':
+            sql = "SELECT %s from networks_network where %s = %d" % (field_des, field_res, value)
+        else:
+            sql = "SELECT %s from networks_network where %s = %s" % (field_des, field_res, value)
         cursor = self.c.execute(sql)
-        for row in cursor:
-            if row[1] == field:
-                netId = row[0]
-                break
+        netId = cursor[0][0]
         self.conn.close()
         return netId
 
@@ -60,7 +60,7 @@ class Station:
         return val
 
     def create(self, StaCode, StaName, net, fJin=111.11, fWei=22.22, fHeigth=100, fDepth=100):
-        netId = Network().getId('Name',net)
+        netId = Network().getId('Name', net)
         sql = "INSERT INTO networks_station (Code, Name, Network_id, fJin, fWei, fHeigth, fDepth)" \
               "VALUES ('%s', '%s', '%d', '%d', '%d', '%d', '%d')" % (StaCode, StaName, netId, fJin, fWei, fHeigth, fDepth)
         self.c.execute(sql)
@@ -80,6 +80,29 @@ class DeleteSql:
         self.c.execute(sql)
         self.conn.commit()
 
+    def delAllField(self, table):
+        sql = 'DELETE from %s' % table
+        print(sql)
+        self.c.execute(sql)
+        self.conn.commit()
+
+
+    def updateid(self, table):
+        self.delAllField(table)
+        sql = 'UPDATE sqlite_sequence set seq=0 where name="%s"' % table
+        print(sql)
+        self.c.execute(sql)
+        self.conn.commit()
+
+
+class SelectAll:
+    def __init__(self):
+        self.conn = sqlite3.connect(SQL_PATH)
+        self.c = self.conn.cursor()
+        sql = 'SELECT name from sqlite_master where type = "table" order by name'
+        self.c.execute(sql)
+        print(self.c.fetchall())
+
 
 class DigitizerInfo:
     def __init__(self, Name, Gain, Rate, Filter):
@@ -88,9 +111,11 @@ class DigitizerInfo:
 
 
 def main():
-    # net = Network().create('TE', 'TE', 'D:/DJANGO', 'D/DJANGO', 3)
+    net = Network().create('TE', 'TE', 'D:/DJANGO', 'D/DJANGO', 3)
     # sta = Station().create('T2867', 'T2867', 'TE')
-    DeleteSql().delTable('networks_day_data')
+    # table_list = ('networks_network', 'networks_station', 'networks_sta_adsensor', 'networks_channel', 'networks_day_data')
+    # for table in table_list:
+    #     DeleteSql().updateid(table)
 
 
 if __name__ == "__main__":
