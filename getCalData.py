@@ -567,7 +567,7 @@ def CalAccPulse(st0,outname,fCalIn=1.0,fCalStvt=1.0,fADStvt=1.0,CalMode='V',lang
     fMaxStvt = (fMaxMedian-fMid)/(fCalIn*fCalStvt*fADStvt)
     fMinStvt = (fMinMedian-fMid)/(fCalIn*fCalStvt*fADStvt)
     print("MaxStvt=%f,MinStvt=%f" % (fMaxStvt,fMinStvt))
-    data = st[0].data
+    data = st0.data
     time = np.zeros(npts)
     ySimuMax = array('f',range(0))
     tMax = array('f',range(0))
@@ -836,7 +836,7 @@ def CalVelPulse(st0,outname,fCalIn=1.0,fCalStvt=1.0,fADStvt=1.0,CalMode='V',lang
             plt.legend(prop=font)
             plt.savefig(outname)
             plt.close('all')
-            return (t_start, 0,0,0,0,0,0,0,0)
+            return (t_start, 0,0,0,0,0,0,0,0, 0)
 
         fb = math.pi/fb
 
@@ -948,6 +948,7 @@ def CalVelPulse(st0,outname,fCalIn=1.0,fCalStvt=1.0,fADStvt=1.0,CalMode='V',lang
 
 def doCalPulse(st0,figfile,outfile,nNetMode,nCalMode,cal_stvt,pulse_input,ad_stvt,m=0,language='chinese',nSaveMode=0,pdf=None):
     if (nNetMode=='V'):
+        print(st0, figfile, pulse_input,cal_stvt,ad_stvt,nCalMode,language,nSaveMode,pdf)
         (sInfo,cal_time,cal_gain1,cal_freq1,cal_dump1,err1,cal_gain2,cal_freq2,cal_dump2,err2) \
             = CalVelPulse(st0, figfile, pulse_input,cal_stvt,ad_stvt,nCalMode,language,nSaveMode,pdf)
         print(cal_time,cal_gain1,cal_freq1,cal_dump1,err1,cal_gain2,cal_freq2,cal_dump2,err2)

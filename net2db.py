@@ -86,7 +86,7 @@ def get_DigitizerInfo(Name='TDE-324',Gain='',Rate='',Filter=''):
 
     if Gain=='':
         try:
-            gain = Digitizer_gain.objects.get(Digitizer=AD, Gain=Gain)
+            gain = Digitizer_gain.objects.get(Digitizer=AD)
         except Digitizer_gain.DoesNotExist:
             bRet = False
             return (False,AD,gain,rate,filter)
