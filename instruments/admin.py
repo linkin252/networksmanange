@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import National,Company,Sensor_base,Sensor_info,AD_Sensor
+from .models import National,Company,Sensor_base,Sensor_info,AD_Sensor, Digitizer_base,\
+    Digitizer_gain,Digitizer_rate,Digitizer_filter,Zero,Pole
 
 # Register your models here.
 class NationalAdmin(admin.ModelAdmin):
@@ -14,4 +15,5 @@ admin.site.register(Company)
 admin.site.register(Sensor_base)
 admin.site.register(Sensor_info)
 admin.site.register(AD_Sensor)
+admin.site.register([Digitizer_base, Digitizer_gain, Digitizer_rate, Digitizer_filter, Zero,Pole])
 
