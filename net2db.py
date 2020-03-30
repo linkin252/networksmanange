@@ -294,7 +294,7 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
                     paz['zeros'].append(complex(0.,0))
                 paz['gain'] = sensorinfo.IGainNormalization
                 paz['sensitivity'] = sensorinfo.IGain * filter.sensitivity
-                #print(paz)
+                print(paz)
                 st = read(path)
                 #print(st)
                 ppsd = PPSD(st[0].stats, paz)
