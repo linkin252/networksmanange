@@ -7,6 +7,8 @@ import datetime
 import os
 import platform
 import sqlite3
+import matplotlib
+matplotlib.use('Agg')
 
 
 class SetDB:
@@ -494,7 +496,7 @@ def addNetDemo(fSrcDir, static_path):
                 paz['gain'] = cSensorInfo.getField('IGainNormalization', sensorinfo)
                 paz['sensitivity'] = cSensorInfo.getField('IGain', sensorinfo) \
                                      * cDigitizerInfo.getField('sensitivity', filter)
-                # print(paz)
+                print(paz)
                 st = read(path)
                 # print(st)
                 ppsd = PPSD(st[0].stats, paz)
@@ -528,20 +530,19 @@ def Net2dbDemo():
         static_path = os.path.join(os.path.dirname(__file__), 'static')
         if os.path.exists('D:\\LK\\86.40新镜像程序\\TD.STA40'):
             addNetDemo('D:\\LK\\86.40新镜像程序\\TD.STA40', static_path)
-        elif os.path.exists("E:\\86.40新镜像程序\\源数据\\ATSY"):
-            addNetDemo("E:\\86.40新镜像程序\\源数据\\ATSY", static_path)
+        elif os.path.exists("E:\\文件\\86.40新镜像程序\\TD.STA40"):
+            addNetDemo("E:\\文件\\86.40新镜像程序\\TD.STA40", static_path)
         else:
             print('Resource File not found!')
     elif PLATFORM == 'Linux':
-        static_path = '/home/usrdata/usb/django/taide/static'
-        addNetDemo('/home/usrdata/usb/data', static_path)
-        addNetDemo('/home/usrdata/usb/mondata', static_path)
+        static_path = '/home/taide/seiscomp3/web/quality'
+        addNetDemo('/home/taide/seiscomp3/var/lib/archive/2020/GD/BLT', static_path)
 
 
 def main():
-    if not os.path.exists(SQL_PATH) and PLATFORM == 'Linux':
-        mkfile(os.path.dirname(SQL_PATH), 0)
-        os.system('sudo cp /home/usrdata/pi/tde/params/db.sqlite3 %s' % os.path.dirname(SQL_PATH))
+    # if not os.path.exists(SQL_PATH) and PLATFORM == 'Linux':
+    #     mkfile(os.path.dirname(SQL_PATH), 0)
+    #     os.system('sudo cp /home/usrdata/pi/tde/params/db.sqlite3 %s' % os.path.dirname(SQL_PATH))
     Net2dbDemo()
 
 
@@ -551,5 +552,5 @@ if __name__ == "__main__":
         SQL_PATH = 'D:/django/trunk/db.sqlite3'
     elif platform.system() == 'Linux':
         PLATFORM = 'Linux'
-        SQL_PATH = '/home/usrdata/usb/django/taide/db.sqlite3'
+        SQL_PATH = '/home/taide/seiscomp3/web/pyscript/db.sqlite3'
     main()
