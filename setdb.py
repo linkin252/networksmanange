@@ -38,9 +38,7 @@ class Network(SetDB):
         self.nNetMode = nNetMode
 
     def get_or_create_Network(self):
-        sql = 'SELECT id from networks_network where ' \
-              'Code="%s" and Name="%s" and IDataDir="%s" and IOutDir="%s" and INetMode=%d' \
-              % (self.netCode, self.netName, self.fSrcDir, self.sDenDir, self.nNetMode)
+        sql = 'SELECT id from networks_network where Code="%s"' % self.netCode
         net = self.selCmd(sql)
         if net is None:
             self.create()
@@ -392,12 +390,11 @@ def updateSql():
         DeleteSql().updateid(table)
 
 
-def addNetDemo(fSrcDir, static_path):
+def addNetDemo(fSrcDir, static_path, flag=True):
     STATIC_PATH = static_path
     sDenDir = 'networks'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
     mkfile(fDenDir, 0)
-    # updateSql()  # 删除旧数据并更新数据库
     all_files = []
     all_paths = []
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
@@ -501,14 +498,15 @@ def addNetDemo(fSrcDir, static_path):
                 ppsd.add(st)
                 # print(ppsd.times_data)
                 # print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
-                ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
-                ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
-                if cSensorInfo.getField('IMainType', sensor) < 2000:
-                    outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
-                    ppsd.plot_temporal(1.414, filename=outfile6)
-                elif 2000 <= cSensorInfo.getField('IMainType', sensor) < 3000:  # 加速度模式)
-                    outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
-                    ppsd.plot_temporal(.707, filename=outfile6)
+                if flag:
+                    ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
+                    ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
+                    if cSensorInfo.getField('IMainType', sensor) < 2000:
+                        outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
+                        ppsd.plot_temporal(1.414, filename=outfile6)
+                    elif 2000 <= cSensorInfo.getField('IMainType', sensor) < 3000:  # 加速度模式)
+                        outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
+                        ppsd.plot_temporal(.707, filename=outfile6)
                 fBlankTime = 0.
                 for i in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
                     dt = (ppsd.times_data[i][0] - ppsd.times_data[i - 1][1])
@@ -524,6 +522,7 @@ def addNetDemo(fSrcDir, static_path):
 
 
 def Net2dbDemo():
+    # updateSql()  # 删除旧数据并更新数据库
     if PLATFORM == 'Windows':
         static_path = os.path.join(os.path.dirname(__file__), 'static')
         if os.path.exists('D:\\LK\\86.40新镜像程序\\TD.STA40'):
@@ -535,7 +534,7 @@ def Net2dbDemo():
     elif PLATFORM == 'Linux':
         static_path = '/home/usrdata/usb/django/taide/static'
         addNetDemo('/home/usrdata/usb/data', static_path)
-        addNetDemo('/home/usrdata/usb/mondata', static_path)
+        addNetDemo('/home/usrdata/usb/mondata', static_path, False)
 
 
 def main():
