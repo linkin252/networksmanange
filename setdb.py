@@ -276,14 +276,15 @@ class Channel(SetDB):
               % (self.locCode, self.chCode, self.sta_adsensor)
         ch_id = self.selCmd(sql)
         if ch_id is None:
-            starttime = datetime.date.today()
-            endtime = datetime.date(2099, 1, 1)
-            sql = 'INSERT INTO networks_channel (CHNo, Code_Loc, Code_CH, Start_Time, End_Time, Sta_ADSensor_id) ' \
-                  'VALUES ("%d", "%s", "%s", "%s", "%s", "%d")' \
-                  % (0, self.locCode, self.chCode, starttime, endtime, self.sta_adsensor)
-            self.c.execute(sql)
-            self.conn.commit()
-            ch_id = self.get_or_create_CH()
+            ch_id = 1
+            # starttime = datetime.date.today()
+            # endtime = datetime.date(2099, 1, 1)
+            # sql = 'INSERT INTO networks_channel (CHNo, Code_Loc, Code_CH, Start_Time, End_Time, Sta_ADSensor_id) ' \
+            #       'VALUES ("%d", "%s", "%s", "%s", "%s", "%d")' \
+            #       % (0, self.locCode, self.chCode, starttime, endtime, self.sta_adsensor)
+            # self.c.execute(sql)
+            # self.conn.commit()
+            # ch_id = self.get_or_create_CH()
         return ch_id
 
 
@@ -405,22 +406,22 @@ def addNetDemo(fSrcDir, static_path, flag=True):
             dayCount = countDay_1OfYear(datetime.date.today())
             (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
             if (len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(ChCode) <= 3 and DataCode == 'D'
-                    and len(nYear) <= 4 and len(nDay) <= 3 and int(nDay) == dayCount):
-                net = Network(NetCode, NetCode, fSrcDir, sDenDir, 3).get_or_create_Network()
-                sta = Station(net, StaCode, StaCode).get_or_create_Station()
+                    and len(nYear) <= 4 and len(nDay) <= 3 and int(nDay) == dayCount):  # and int(nDay) == dayCount
+                # net = Network(NetCode, NetCode, fSrcDir, sDenDir, 3).get_or_create_Network()
+                # sta = Station(net, StaCode, StaCode).get_or_create_Station()
                 cDigitizerInfo = DigitizerInfo('TDE-324', '10Vpp', '100Hz', 'Linear')
                 (bRet, AD, gain, rate, filter) = cDigitizerInfo.getDigitizerInfo()
                 if not bRet:
                     print('Digitizer not found!')
                     continue
-                cSensorInfo = SensorInfo('TMA-33')
+                cSensorInfo = SensorInfo('TDA-33M')
                 (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
                 if not bRet:
                     print('Sensor not found!')
                     continue
-                adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
-                sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
-                ch = Channel(sta_adsensor, LocCode, ChCode).get_or_create_CH()
+                # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
+                # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
+                ch = Channel(1, LocCode, ChCode).get_or_create_CH()
 
                 sDenDir2 = sDenDir + '/' + NetCode
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
@@ -456,7 +457,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 outfile5 = fDenDir + '/' + ChName + '.spectrogram.png'
 
                 print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
-                st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                         right_vertical_labels=True,
                         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
                         color=["r", "b", "g"], show_y_UTC_label=True,
@@ -465,7 +466,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 st2 = st.copy()
 
                 st.filter("lowpass", freq=0.2, corners=2)
-                st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                         right_vertical_labels=True,
                         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
                         color=["r", "b", "g"], show_y_UTC_label=True,
@@ -473,7 +474,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                         outfile=outfile2)
 
                 st2.filter("highpass", freq=0.2)
-                st2.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                          right_vertical_labels=True,
                          vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
                          color=["r", "b", "g"], show_y_UTC_label=True,
