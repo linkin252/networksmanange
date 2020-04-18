@@ -1238,7 +1238,7 @@ def main():
     all_file = []
     all_path = []
     inoutfiles = []
-    cal_path = 'D:/django/trunk/cal_data'
+    cal_path = 'D:\\LK\\86.40新镜像程序\\源数据'
     ini_par = 'caltime.ini'
 
     sys = platform.system()

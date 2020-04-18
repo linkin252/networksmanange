@@ -124,7 +124,7 @@ def delBySta(station):
 
 
 def getDayData():
-    sensorinfo = 'TMA-33'
+    sensorinfo = 'TDA-33M'
     net2db.Net2dbDemo(sensorinfo)
 
 

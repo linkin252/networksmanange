@@ -220,7 +220,7 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
                 (bRet,AD,gain,rate,filter) = get_DigitizerInfo('TDE-324','10Vpp','100Hz','Linear')
                 if bRet==False:
                     continue
-                (bRet,sensor,sensorinfo) = get_SensorInfo(sensortype)
+                (bRet,sensor,sensorinfo) = get_SensorInfo(sensortype, '0-200Hz', '1.0225V/M/S**2')
                 if bRet==False:
                     continue
                 ADSensor = get_or_create_ADSensor(filter,sensorinfo)
@@ -294,7 +294,7 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
                     paz['zeros'].append(complex(0.,0))
                 paz['gain'] = sensorinfo.IGainNormalization
                 paz['sensitivity'] = sensorinfo.IGain * filter.sensitivity
-                print(paz)
+                #print(paz)
                 st = read(path)
                 #print(st)
                 ppsd = PPSD(st[0].stats, paz)
@@ -326,8 +326,8 @@ def addNetDemo(fSrcDir,nNetMode=1,sensortype='TMA-33'):
 
 def Net2dbDemo(sensortype):
     if platform.system() == 'Windows':
-        if os.path.exists('D:\\LK\\86.40新镜像程序\\TD.STA40'):
-            addNetDemo("D:\\LK\\86.40新镜像程序\\TD.STA40", 3, sensortype)
+        if os.path.exists('D:\\LK\\86.40新镜像程序\\源数据'):
+            addNetDemo("D:\\LK\\86.40新镜像程序\\源数据", 3, sensortype)
         else:
             addNetDemo("E:\\文件\\86.40新镜像程序\\TD.STA40", 3, sensortype)
     elif platform.system() == 'Linux':

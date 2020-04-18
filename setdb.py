@@ -1,7 +1,8 @@
 # coding=utf-8
-
+import configparser
+import re
 import warnings
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 import datetime
 import os
@@ -391,6 +392,42 @@ def updateSql():
         DeleteSql().updateid(table)
 
 
+# 匹配通道名和通道摆类型
+def chnMatch(path, chn_list):
+    cf = configparser.ConfigParser()
+    cf.read(path)
+    chn = [['CHN0_CODE', 'CHN0_TYPE'], ['CHN1_CODE', 'CHN1_TYPE'], ['CHN2_CODE', 'CHN2_TYPE'],
+           ['CHN3_CODE', 'CHN3_TYPE'], ['CHN4_CODE', 'CHN4_TYPE'], ['CHN5_CODE', 'CHN5_TYPE']]
+    if cf.getint('PI_PAR', 'CHN_NUM') == 3:
+        for i in range(0, 3):
+            if cf.getint('PI_PAR', chn[i][1]) == 1:
+                chn[i].append('V')
+            elif cf.getint('PI_PAR', chn[i][1]) == 2:
+                chn[i].append('A')
+            chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
+    elif cf.getint('PI_PAR', 'CHN_NUM') == 6:
+        for i in range(0, 6):
+            if cf.getint('PI_PAR', chn[i][1]) == 1:
+                chn[i].append('V')
+            elif cf.getint('PI_PAR', chn[i][1]) == 2:
+                chn[i].append('A')
+            chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
+    return chn_list
+
+
+# 添加电压/电流标定，标定灵敏度
+def senMatch(path, chn_list):
+    f = open(path, 'r')
+    for readline in f.readlines():
+        if 'SENSOR0_TYPE' in readline:
+            for i in range(0, 3):
+                chn_list[i].append(re.split("=|,|\n", readline)[2])
+        if 'SENSOR1_TYPE' in readline and len(chn_list) > 3:
+            for i in range(3, 6):
+                chn_list[i].append(re.split("=|,|\n", readline)[2])
+    return chn_list
+
+
 def addNetDemo(fSrcDir, static_path, flag=True):
     STATIC_PATH = static_path
     sDenDir = 'networks'
@@ -398,6 +435,14 @@ def addNetDemo(fSrcDir, static_path, flag=True):
     mkfile(fDenDir, 0)
     all_files = []
     all_paths = []
+    chn_list = []
+    sensortype = ''
+    if os.path.exists('pi.ini'):
+        chn_list = chnMatch('pi.ini', chn_list)
+        chn_list = senMatch('response.ini', chn_list)
+    else:
+        chn_list = chnMatch('/home/pi/tde/params/pi.ini', chn_list)
+        chn_list = senMatch('/home/pi/tde/params/response.ini', chn_list)
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
     for i in range(0, len(all_files)):
         file = all_files[i]
@@ -414,7 +459,15 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 if not bRet:
                     print('Digitizer not found!')
                     continue
-                cSensorInfo = SensorInfo('TDA-33M')
+                for chn in chn_list:
+                    if ChCode == chn[0]:
+                        sensortype = chn[2]
+                if sensortype != '':
+                    print(ChCode, sensortype)
+                    cSensorInfo = SensorInfo(sensortype)
+                else:
+                    print(ChCode, sensortype)
+                    cSensorInfo = SensorInfo('TMA-33')
                 (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
                 if not bRet:
                     print('Sensor not found!')
@@ -465,22 +518,23 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                         outfile=outfile1)
                 st2 = st.copy()
 
-                st.filter("lowpass", freq=0.2, corners=2)
-                st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
-                        right_vertical_labels=True,
-                        vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
-                        color=["r", "b", "g"], show_y_UTC_label=True,
-                        title=ChName + '.low_pass 0.2Hz', time_offset=8,
-                        outfile=outfile2)
+                if flag:
+                    st.filter("lowpass", freq=0.2, corners=2)
+                    st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                            right_vertical_labels=True,
+                            vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                            color=["r", "b", "g"], show_y_UTC_label=True,
+                            title=ChName + '.low_pass 0.2Hz', time_offset=8,
+                            outfile=outfile2)
 
-                st2.filter("highpass", freq=0.2)
-                st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
-                         right_vertical_labels=True,
-                         vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
-                         color=["r", "b", "g"], show_y_UTC_label=True,
-                         # events={"min_magnitude": 5},
-                         title=ChName + '.high_pass 0.2Hz', time_offset=8,
-                         outfile=outfile3)
+                    st2.filter("highpass", freq=0.2)
+                    st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                             right_vertical_labels=True,
+                             vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
+                             color=["r", "b", "g"], show_y_UTC_label=True,
+                             # events={"min_magnitude": 5},
+                             title=ChName + '.high_pass 0.2Hz', time_offset=8,
+                             outfile=outfile3)
 
                 paz = {}
                 paz['zeros'] = []
@@ -526,8 +580,9 @@ def Net2dbDemo():
     # updateSql()  # 删除旧数据并更新数据库
     if PLATFORM == 'Windows':
         static_path = os.path.join(os.path.dirname(__file__), 'static')
-        if os.path.exists('D:\\LK\\86.40新镜像程序\\TD.STA40'):
-            addNetDemo('D:\\LK\\86.40新镜像程序\\TD.STA40', static_path)
+        if os.path.exists('D:\\LK\\86.40新镜像程序\\源数据'):
+            addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\data', static_path)
+            addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\mondata', static_path, False)
         elif os.path.exists("E:\\86.40新镜像程序\\源数据\\ATSY"):
             addNetDemo("E:\\86.40新镜像程序\\源数据\\ATSY", static_path)
         else:
