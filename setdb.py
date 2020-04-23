@@ -2,10 +2,17 @@
 import configparser
 import re
 import warnings
-# warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+from obspy.io.xseed.parser import Parser
+from obspy import read_inventory
 
 import datetime
 import os
+import sys
 import platform
 import sqlite3
 
@@ -27,6 +34,82 @@ class Instruments_base(SetDB):
         sql = 'SELECT %s from instruments_instruments_base where Name="%s"' % (field, name)
         ret = self.selCmd(sql)
         return ret
+
+
+class Chg626(Instruments_base):
+    def __init__(self):
+        super().__init__()
+        self.list = {7: 5368709.12, 10: 5368709.12, 8: 2684354.56, 11: 2684354.56, 9: 1342177.28, 12: 1342177.28}
+
+    def isExists626(self):
+        id = self.getField('id', 'TDE-626')
+        if id is not None:
+            print('TDE626ID:', id)
+            sql = 'UPDATE instruments_instruments_base set Name="TDE-324-2020" where id="%d"' % id
+            self.c.execute(sql)
+            self.upd_sensitivity()
+            self.conn.commit()
+            self.create_png()
+        else:
+            print('TDE-324-2020 is exists')
+
+    def upd_sensitivity(self):
+        for id in range(7, 13):
+            sql = 'UPDATE instruments_digitizer_filter set sensitivity=%f where DigitizerRate_id=%d'\
+                  % (self.list[id], id)
+            self.c.execute(sql)
+
+    def create_png(self):
+        sName = '泰德 TDE-324-2020'
+        for id in range(85, 97):
+            sql = 'SELECT IParUrl FROM instruments_digitizer_filter where id=%d' % id
+            parurl = self.selCmd(sql)
+            if PLATFORM == 'Windows':
+                dir = os.path.join('D:/django/trunk/static', parurl)
+                (sample_rate, sensitivity) = parser_digitizer_resp(dir, sName)
+            else:
+                dir = '/home/usb/django/taide/static/' + parurl.replace('\\', '/')
+                (sample_rate, sensitivity) = self.parser_digitizer_resp(dir, sName)
+            print(dir)
+            print(sample_rate, sensitivity)
+
+    def plot_Digitizer_Freq_Amp(self, pltfile, sName, sample_rate, sensitivity, h, f):
+        font = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=12)
+        fontTitle = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=18)
+        plt.figure(figsize=(16, 12))
+        plt.grid(linestyle=':')
+        plt.semilogy(f, abs(h))
+
+        import datetime
+        timestr = datetime.datetime.now().strftime('%Y-%m-%d')
+        timestr = "Created by 泰德, " + timestr
+        x0 = '                                                                   频率[Hz]                                         ' + timestr
+        plt.xlabel(x0, fontproperties=font)
+        plt.ylabel('增益[Ct/V]', fontproperties=font)
+        plt.title('%s 理论幅频响应\n (采样速率：%sSPS，归一化增益：%sCt/V)\n' % (sName, sample_rate, sensitivity),
+                  fontproperties=fontTitle)
+        plt.savefig(pltfile)
+        plt.close('all')
+
+    def parser_digitizer_resp(self, dir, sName):
+        filename = dir + '.resp'
+        par = Parser(filename)
+        par.write_xseed(dir + '.xml')
+        par.write_seed(dir + '.dataless')
+
+        channel = par.blockettes[52][0].channel_identifier
+        sample_rate = par.blockettes[52][0].sample_rate
+        paz = par.get_paz(channel)
+        sensitivity = paz['digitizer_gain']
+        if (sample_rate < 1):
+            sample_rate = 1
+
+        inv = read_inventory(filename, "RESP")
+        resp = inv[0][0][0].response
+        # print(resp)
+        response, freqs = resp.get_evalresp_response(1. / (sample_rate * 2.), 65536 * 16, output="VEL")
+        self.plot_Digitizer_Freq_Amp(dir + '.freq_amp.png', sName, sample_rate, sensitivity, response, freqs)
+        return (sample_rate, sensitivity)
 
 
 class Network(SetDB):
@@ -428,6 +511,12 @@ def senMatch(path, chn_list):
     return chn_list
 
 
+# 修改数据库626为324-2020
+def isnewSql():
+    chg626 = Chg626()
+    chg626.isExists626()
+
+
 def addNetDemo(fSrcDir, static_path, flag=True):
     STATIC_PATH = static_path
     sDenDir = 'networks'
@@ -440,9 +529,12 @@ def addNetDemo(fSrcDir, static_path, flag=True):
     if os.path.exists('pi.ini'):
         chn_list = chnMatch('pi.ini', chn_list)
         chn_list = senMatch('response.ini', chn_list)
-    else:
+    elif os.path.exists('/home/pi/tde/params/pi.ini') and os.path.exists('/home/pi/tde/params/response.ini'):
         chn_list = chnMatch('/home/pi/tde/params/pi.ini', chn_list)
         chn_list = senMatch('/home/pi/tde/params/response.ini', chn_list)
+    else:
+        print('params files is not exists!')
+        return
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
     for i in range(0, len(all_files)):
         file = all_files[i]
@@ -459,22 +551,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 if not bRet:
                     print('Digitizer not found!')
                     continue
-                for chn in chn_list:
-                    if ChCode == chn[0]:
-                        sensortype = chn[2]
-                if sensortype != '':
-                    print(ChCode, sensortype)
-                    cSensorInfo = SensorInfo(sensortype)
-                else:
-                    print(ChCode, sensortype)
-                    cSensorInfo = SensorInfo('TMA-33')
-                (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
-                if not bRet:
-                    print('Sensor not found!')
-                    continue
-                # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
-                # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
-                ch = Channel(1, LocCode, ChCode).get_or_create_CH()
+
 
                 sDenDir2 = sDenDir + '/' + NetCode
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
@@ -535,6 +612,23 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                              # events={"min_magnitude": 5},
                              title=ChName + '.high_pass 0.2Hz', time_offset=8,
                              outfile=outfile3)
+
+                for chn in chn_list:
+                    if ChCode == chn[0]:
+                        sensortype = chn[2]
+                if sensortype != '':
+                    print(ChCode, sensortype)
+                    cSensorInfo = SensorInfo(sensortype)
+                else:
+                    print(ChCode, sensortype)
+                    cSensorInfo = SensorInfo('TMA-33')
+                (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
+                if not bRet:
+                    print('Sensor not found!')
+                    continue
+                # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
+                # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
+                ch = Channel(1, LocCode, ChCode).get_or_create_CH()
 
                 paz = {}
                 paz['zeros'] = []
@@ -597,6 +691,7 @@ def main():
     if not os.path.exists(SQL_PATH) and PLATFORM == 'Linux':
         mkfile(os.path.dirname(SQL_PATH), 0)
         os.system('sudo cp /home/usrdata/pi/tde/params/db.sqlite3 %s' % os.path.dirname(SQL_PATH))
+    isnewSql()  # 更新626为324-2020
     Net2dbDemo()
 
 
@@ -604,7 +699,10 @@ if __name__ == "__main__":
     if platform.system() == 'Windows':
         PLATFORM = 'Windows'
         SQL_PATH = 'D:/django/trunk/db.sqlite3'
+        sys.path.append('D:/django/trunk/')
     elif platform.system() == 'Linux':
         PLATFORM = 'Linux'
         SQL_PATH = '/home/usrdata/usb/django/taide/db.sqlite3'
+        sys.path.append('/home/usb/django/taide/')
+    from doobspy import parser_sensor_resp, parser_digitizer_resp
     main()
