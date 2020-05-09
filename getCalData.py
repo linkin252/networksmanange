@@ -9,6 +9,7 @@ import sys, getopt
 import math
 import numpy as np
 import obspy
+from obspy import read
 import datetime
 from array import array
 from matplotlib.font_manager import FontProperties  # 字体管理器
@@ -1118,6 +1119,29 @@ def newCalFile(ini_path, all_path, inoutfiles):
     cf.write(open(ini_path, 'w'))
 
 
+def newEventFile(all_path):
+    for file in all_path:
+        mTime = os.path.getmtime(file)  # 获取各个文件的修改时间
+        now = datetime.datetime.now().timestamp()
+        if len(file.split('.')) > 3 and now - 600 <= mTime < now:
+            print('\n\n' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                  '-------------------------------------------------------------------')
+            try:
+                st = read(file)
+            except Exception as ex:
+                print('%s数据读取错误\n' % file, ex)
+                continue
+            ChName = os.path.basename(file).__str__()
+            outfile = os.path.dirname(file) + '/Event_%s.png' % ChName.split('.')[3]
+            print('Event:', ChName)
+            st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
+                    right_vertical_labels=True,
+                    vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                    color='blue', show_y_UTC_label=True,
+                    title=ChName,
+                    outfile=outfile)
+
+
 def timeInit(ini_path):
     now = datetime.datetime.timestamp(datetime.datetime.now())
     cf = configparser.ConfigParser()
@@ -1235,20 +1259,27 @@ def getfigfile(parfile, chnName):
 
 def main():
     language = 'chinese'
-    all_file = []
-    all_path = []
+    cal_all_file = []
+    cal_all_path = []
+    event_all_file = []
+    event_all_path = []
     inoutfiles = []
-    cal_path = 'D:\\LK\\86.40新镜像程序\\源数据'
-    ini_par = 'caltime.ini'
+    cal_path = 'D:\\LK\\86.40新镜像程序\\源数据\\cal'
+    event_path = 'D:\\LK\\86.40新镜像程序\\源数据\\event'
+    cal_ini = 'caltime.ini'
 
     sys = platform.system()
     if sys == 'Linux':
         cal_path = '/home/usrdata/usb/log/cal'
-        ini_par = '/home/usrdata/pi/tde/params/caltime.ini'
+        cal_ini = '/home/usrdata/pi/tde/params/caltime.ini'
+        event_path = '/home/usrdata/usb/log/event'
 
-    show_path(cal_path, all_file, all_path)
-    timeInit(ini_par)
-    newCalFile(ini_par, all_path, inoutfiles)
+    show_path(cal_path, cal_all_file, cal_all_path)
+    timeInit(cal_ini)
+    newCalFile(cal_ini, cal_all_path, inoutfiles)
+    event_all_file, event_all_path = show_path(event_path, event_all_file, event_all_path)
+
+    newEventFile(event_all_path)
 
     if len(inoutfiles) > 0:
         print('\n\n' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),

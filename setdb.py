@@ -536,9 +536,9 @@ def addNetDemo(fSrcDir, static_path, flag=True):
         print('params files is not exists!')
         return
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
-    for i in range(0, len(all_files)):
-        file = all_files[i]
-        path = all_paths[i]
+    for I in range(0, len(all_files)):
+        file = all_files[I]
+        path = all_paths[I]
         if file.count('.') >= 6:
             dayCount = countDay_1OfYear(datetime.date.today())
             (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
@@ -587,32 +587,52 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 outfile5 = fDenDir + '/' + ChName + '.spectrogram.png'
 
                 print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
-                st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                if flag:
+                    try:
+                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                         right_vertical_labels=True,
                         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
                         color=["r", "b", "g"], show_y_UTC_label=True,
                         title=ChName, time_offset=8,
                         outfile=outfile1)
-                st2 = st.copy()
+                        st2 = st.copy()
+                        st.filter("lowpass", freq=0.2, corners=2)
+                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                                right_vertical_labels=True,
+                                vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                                color=["r", "b", "g"], show_y_UTC_label=True,
+                                title=ChName + '.low_pass 0.2Hz', time_offset=8,
+                                outfile=outfile2)
 
-                if flag:
-                    st.filter("lowpass", freq=0.2, corners=2)
-                    st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
-                            right_vertical_labels=True,
-                            vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
-                            color=["r", "b", "g"], show_y_UTC_label=True,
-                            title=ChName + '.low_pass 0.2Hz', time_offset=8,
-                            outfile=outfile2)
-
-                    st2.filter("highpass", freq=0.2)
-                    st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
-                             right_vertical_labels=True,
-                             vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
-                             color=["r", "b", "g"], show_y_UTC_label=True,
-                             # events={"min_magnitude": 5},
-                             title=ChName + '.high_pass 0.2Hz', time_offset=8,
-                             outfile=outfile3)
-
+                        st2.filter("highpass", freq=0.2)
+                        st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                                 right_vertical_labels=True,
+                                 vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
+                                 color=["r", "b", "g"], show_y_UTC_label=True,
+                                 # events={"min_magnitude": 5},
+                                 title=ChName + '.high_pass 0.2Hz', time_offset=8,
+                                 outfile=outfile3)
+                    except Exception as ex:
+                        print('主通道产出图失败\n', ex)
+                else:
+                    nNum = 0
+                    nSize = 0
+                    nStd = 0
+                    for n in range(len(st)):
+                        nNum += st[n].data.sum()
+                        nStd += st[n].data.std()
+                        nSize += st[n].data.size
+                    nNum /= nSize
+                    nNum = str('%.3f') % nNum
+                    try:
+                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
+                                right_vertical_labels=True, number_of_ticks=10,
+                                vertical_scaling_range=nStd, one_tick_per_line=True,
+                                color='blue', show_y_UTC_label=True,
+                                title=ChName, time_offset=8,
+                                outfile=outfile1)
+                    except Exception as ex:
+                        print('辅助通道产出图失败\n', ex)
                 for chn in chn_list:
                     if ChCode == chn[0]:
                         sensortype = chn[2]
@@ -624,8 +644,9 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                     cSensorInfo = SensorInfo('TMA-33')
                 (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
                 if not bRet:
-                    print('Sensor not found!')
-                    continue
+                    print('Sensor not found! use TMA-33')
+                    cSensorInfo = SensorInfo('TMA-33')
+                    (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
                 # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
                 # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
                 ch = Channel(1, LocCode, ChCode).get_or_create_CH()
@@ -648,19 +669,22 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 # print(ppsd.times_data)
                 # print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
                 if flag:
-                    ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
-                    ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
-                    if cSensorInfo.getField('IMainType', sensor) < 2000:
-                        outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
-                        ppsd.plot_temporal(1.414, filename=outfile6)
-                    elif 2000 <= cSensorInfo.getField('IMainType', sensor) < 3000:  # 加速度模式)
-                        outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
-                        ppsd.plot_temporal(.707, filename=outfile6)
+                    try:
+                        ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
+                        ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
+                        if cSensorInfo.getField('IMainType', sensor) < 2000:
+                            outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
+                            ppsd.plot_temporal(1.414, filename=outfile6)
+                        elif 2000 <= cSensorInfo.getField('IMainType', sensor) < 3000:  # 加速度模式)
+                            outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
+                            ppsd.plot_temporal(.707, filename=outfile6)
+                    except Exception as ex:
+                        print('质量产出图失败\n', ex)
                 fBlankTime = 0.
-                for i in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
-                    dt = (ppsd.times_data[i][0] - ppsd.times_data[i - 1][1])
+                for I in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
+                    dt = (ppsd.times_data[I][0] - ppsd.times_data[I - 1][1])
                     if dt < 0:
-                        print(dt, ppsd.times_data[i][0], ppsd.times_data[i - 1][1])
+                        print(dt, ppsd.times_data[I][0], ppsd.times_data[I - 1][1])
                     else:
                         fBlankTime += dt
                 runrate = 1.0 - fBlankTime / 86400.
@@ -683,7 +707,7 @@ def Net2dbDemo():
             print('Resource File not found!')
     elif PLATFORM == 'Linux':
         static_path = '/home/usrdata/usb/django/taide/static'
-        addNetDemo('/home/usrdata/usb/data', static_path)
+        # addNetDemo('/home/usrdata/usb/data', static_path)
         addNetDemo('/home/usrdata/usb/mondata', static_path, False)
 
 
