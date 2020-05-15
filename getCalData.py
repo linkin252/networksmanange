@@ -1124,22 +1124,43 @@ def newEventFile(all_path):
         mTime = os.path.getmtime(file)  # 获取各个文件的修改时间
         now = datetime.datetime.now().timestamp()
         if len(file.split('.')) > 3 and now - 600 <= mTime < now:
-            print('\n\n' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                  '-------------------------------------------------------------------')
             try:
                 st = read(file)
             except Exception as ex:
                 print('%s数据读取错误\n' % file, ex)
                 continue
             ChName = os.path.basename(file).__str__()
-            outfile = os.path.dirname(file) + '/Event_%s.png' % ChName.split('.')[3]
             print('Event:', ChName)
-            st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
-                    right_vertical_labels=True,
-                    vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
-                    color='blue', show_y_UTC_label=True,
-                    title=ChName,
-                    outfile=outfile)
+            eTime = '%s-%s-%s %s:%s:%s' % (ChName.split('.')[-1][0:4], ChName.split('.')[-1][4:6],
+                                           ChName.split('.')[-1][6:8], ChName.split('.')[-1][8:10],
+                                           ChName.split('.')[-1][10:12], ChName.split('.')[-1][12:14])
+            ChName += '\n触发时间：%s\n' % eTime
+            outfile = os.path.dirname(file) + '/Event_%s.png' % ChName.split('.')[3]
+
+            (font, fontTitle) = setFont()
+            for i in range(len(st)):
+                sps = st[i].stats.sampling_rate
+                npts = st[i].stats.npts
+                t_start = st[i].stats.starttime.datetime.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                t_start = t_start.strftime('%Y-%m-%d %H:%M:%S')
+                t_end = st[i].stats.endtime.datetime.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                t_end = t_end.strftime('%Y-%m-%d %H:%M:%S')
+                ChName = ChName + ' %s - %s' % (t_start, t_end)
+                times = np.zeros(npts)
+                for n in range(1, npts):
+                    times[n] = n / sps
+                data = st[i].data
+                sLabels = u'原始数据'
+
+                plt.figure(figsize=(16, 12))
+                plt.grid(linestyle=':')
+                plt.suptitle(ChName, fontproperties=fontTitle)
+                plt.plot(times, data, c='blue', label=sLabels)
+                plt.xlabel('时间(s)', fontproperties=fontTitle)
+                plt.ylabel('幅值(Ct)', fontproperties=fontTitle)
+                plt.legend(prop=font)
+                plt.savefig(outfile)
+                plt.close('all')
 
 
 def timeInit(ini_path):

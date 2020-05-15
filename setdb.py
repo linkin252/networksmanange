@@ -1,14 +1,20 @@
 # coding=utf-8
 import configparser
 import re
+import time
 import warnings
+
 warnings.filterwarnings("ignore")
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-from obspy.io.xseed.parser import Parser
-from obspy import read_inventory
+
+from obspy import read
+# from obspy.io.xseed import Parser
+# from obspy import read_inventory
+from obspy.signal import PPSD
+from obspy.imaging.cm import pqlx
 
 import datetime
 import os
@@ -55,7 +61,7 @@ class Chg626(Instruments_base):
 
     def upd_sensitivity(self):
         for id in range(7, 13):
-            sql = 'UPDATE instruments_digitizer_filter set sensitivity=%f where DigitizerRate_id=%d'\
+            sql = 'UPDATE instruments_digitizer_filter set sensitivity=%f where DigitizerRate_id=%d' \
                   % (self.list[id], id)
             self.c.execute(sql)
 
@@ -517,6 +523,79 @@ def isnewSql():
     chg626.isExists626()
 
 
+def monMatch(path):
+    mon_dist = {}
+    for mon in MON_KEYS:
+        mon_dist.setdefault(mon, '')
+    if os.path.exists(path):
+        f = open(path, 'r')
+        for readline in f.readlines():
+            if readline.split('=')[0] in MON_KEYS:
+                chName = re.split("=|,|\s", readline)
+                mon_dist[readline.split('=')[0]] = chName[-2]
+    for key in MON_KEYS:
+        MON_CHN.setdefault(mon_dist[key], MON_DIST[key])
+
+
+def stamp2time(stamp):
+    da = time.localtime(stamp)
+    da = time.strftime('%H:%M:%S', da)
+    return da
+
+
+def setFont():
+    sys = platform.system()
+    if sys == "Windows":
+        font = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=12)
+        fontTitle = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=18)
+    else:
+        font = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=12)
+        fontTitle = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=18)
+    return font, fontTitle
+
+
+#  统一采样率和标识符
+def mulRate(st):
+    tr_id = []
+    for i in range(len(st)):
+        if st[i].id not in tr_id:
+            tr_id.append(st[i].id)
+
+    tr = []
+    for i in range(len(st)):
+        if st[i].stats.sampling_rate not in tr:
+            tr.append(float(st[i].stats.sampling_rate))
+    if len(tr) == 1 and len(tr_id) == 1:
+        return st
+    elif len(tr) != 1:
+        max_sam = 0
+        max_time = 0
+        for i in range(len(tr)):
+            st2 = st.select(sampling_rate=tr[i])
+            times = st2[0].stats.endtime.timestamp - st2[0].stats.starttime.timestamp
+            if times > max_time:
+                max_time = times
+                max_sam = tr[i]
+        st2 = st.copy()
+        st2.interpolate(sampling_rate=max_sam)
+        print("change traces to same sampling rate:%d from %s" % (max_sam, tr))
+        return st2
+    elif len(tr_id) != 1:
+        max_id = 0
+        max_time = 0
+        for i in range(len(tr_id)):
+            st2 = st.select(id=tr_id[i])
+            times = st2[0].stats.endtime.timestamp - st2[0].stats.starttime.timestamp
+            if times > max_time:
+                max_time = times
+                max_id = tr_id[i]
+        st2 = st.select(id=max_id)
+        print("change traces to same id:%s from %s" % (max_id, tr_id))
+        return st2
+    else:
+        return st
+
+
 def addNetDemo(fSrcDir, static_path, flag=True):
     STATIC_PATH = static_path
     sDenDir = 'networks'
@@ -525,7 +604,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
     all_files = []
     all_paths = []
     chn_list = []
-    sensortype = ''
+    sensortype = 'TMA-33'
     if os.path.exists('pi.ini'):
         chn_list = chnMatch('pi.ini', chn_list)
         chn_list = senMatch('response.ini', chn_list)
@@ -535,6 +614,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
     else:
         print('params files is not exists!')
         return
+    (font, fontTitle) = setFont()
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
     for I in range(0, len(all_files)):
         file = all_files[I]
@@ -542,8 +622,9 @@ def addNetDemo(fSrcDir, static_path, flag=True):
         if file.count('.') >= 6:
             dayCount = countDay_1OfYear(datetime.date.today())
             (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
-            if (len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(ChCode) <= 3 and DataCode == 'D'
-                    and len(nYear) <= 4 and len(nDay) <= 3 and int(nDay) == dayCount):  # and int(nDay) == dayCount
+            if (int(nDay) == dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(
+                    ChCode) <= 3 and DataCode == 'D'
+                    and len(nYear) <= 4 and len(nDay) <= 3):  # and int(nDay) == dayCount
                 # net = Network(NetCode, NetCode, fSrcDir, sDenDir, 3).get_or_create_Network()
                 # sta = Station(net, StaCode, StaCode).get_or_create_Station()
                 cDigitizerInfo = DigitizerInfo('TDE-324', '10Vpp', '100Hz', 'Linear')
@@ -551,7 +632,6 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 if not bRet:
                     print('Digitizer not found!')
                     continue
-
 
                 sDenDir2 = sDenDir + '/' + NetCode
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
@@ -569,11 +649,6 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 fDenDir = os.path.join(STATIC_PATH, sDenDir2)
                 mkfile(fDenDir, 0)
 
-                from obspy import read
-                # from obspy.io.xseed import Parser
-                from obspy.signal import PPSD
-                from obspy.imaging.cm import pqlx
-
                 try:
                     st = read(path)
                 except Exception as ex:
@@ -588,18 +663,19 @@ def addNetDemo(fSrcDir, static_path, flag=True):
 
                 print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
                 if flag:
+                    st = mulRate(st)
                     try:
                         st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
-                        right_vertical_labels=True,
-                        vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
-                        color=["r", "b", "g"], show_y_UTC_label=True,
-                        title=ChName, time_offset=8,
-                        outfile=outfile1)
+                                right_vertical_labels=True,
+                                vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
+                                color=["r", "b", "g"], show_y_UTC_label=True,
+                                title=ChName, time_offset=8,
+                                outfile=outfile1)
                         st2 = st.copy()
                         st.filter("lowpass", freq=0.2, corners=2)
                         st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                                 right_vertical_labels=True,
-                                vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                                vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
                                 color=["r", "b", "g"], show_y_UTC_label=True,
                                 title=ChName + '.low_pass 0.2Hz', time_offset=8,
                                 outfile=outfile2)
@@ -607,68 +683,42 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                         st2.filter("highpass", freq=0.2)
                         st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
                                  right_vertical_labels=True,
-                                 vertical_scaling_range=st2[0].data.std() * 20, one_tick_per_line=True,
+                                 vertical_scaling_range=st2[0].data.std() * 40, one_tick_per_line=True,
                                  color=["r", "b", "g"], show_y_UTC_label=True,
                                  # events={"min_magnitude": 5},
                                  title=ChName + '.high_pass 0.2Hz', time_offset=8,
                                  outfile=outfile3)
                     except Exception as ex:
                         print('主通道产出图失败\n', ex)
-                else:
-                    nNum = 0
-                    nSize = 0
-                    nStd = 0
-                    for n in range(len(st)):
-                        nNum += st[n].data.sum()
-                        nStd += st[n].data.std()
-                        nSize += st[n].data.size
-                    nNum /= nSize
-                    nNum = str('%.3f') % nNum
-                    try:
-                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
-                                right_vertical_labels=True, number_of_ticks=10,
-                                vertical_scaling_range=nStd, one_tick_per_line=True,
-                                color='blue', show_y_UTC_label=True,
-                                title=ChName, time_offset=8,
-                                outfile=outfile1)
-                    except Exception as ex:
-                        print('辅助通道产出图失败\n', ex)
-                for chn in chn_list:
-                    if ChCode == chn[0]:
-                        sensortype = chn[2]
-                if sensortype != '':
-                    print(ChCode, sensortype)
+                    for chn in chn_list:
+                        if ChCode == chn[0]:
+                            sensortype = chn[2]
                     cSensorInfo = SensorInfo(sensortype)
-                else:
-                    print(ChCode, sensortype)
-                    cSensorInfo = SensorInfo('TMA-33')
-                (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
-                if not bRet:
-                    print('Sensor not found! use TMA-33')
-                    cSensorInfo = SensorInfo('TMA-33')
                     (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
-                # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
-                # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
-                ch = Channel(1, LocCode, ChCode).get_or_create_CH()
+                    if not bRet:
+                        print('Sensor not found! use TMA-33')
+                        cSensorInfo = SensorInfo('TMA-33')
+                        (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
+                    # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
+                    # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
+                    ch = Channel(1, LocCode, ChCode).get_or_create_CH()
+                    print(ChCode, sensortype)
 
-                paz = {}
-                paz['zeros'] = []
-                paz['zeros'] = Zeros(sensorinfo).getZero()
-                paz['poles'] = []
-                paz['poles'] = Poles(sensorinfo).getPole()
-                if 2000 <= cSensorInfo.getField('IMainType', sensor) <= 3000:
-                    paz['zeros'].append(complex(0., 0))
-                paz['gain'] = cSensorInfo.getField('IGainNormalization', sensorinfo)
-                paz['sensitivity'] = cSensorInfo.getField('IGain', sensorinfo) \
-                                     * cDigitizerInfo.getField('sensitivity', filter)
-                # print(paz)
-                st = read(path)
-                # print(st)
-                ppsd = PPSD(st[0].stats, paz)
-                ppsd.add(st)
-                # print(ppsd.times_data)
-                # print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
-                if flag:
+                    paz = {}
+                    paz['zeros'] = []
+                    paz['zeros'] = Zeros(sensorinfo).getZero()
+                    paz['poles'] = []
+                    paz['poles'] = Poles(sensorinfo).getPole()
+                    if 2000 <= cSensorInfo.getField('IMainType', sensor) <= 3000:
+                        paz['zeros'].append(complex(0., 0))
+                    paz['gain'] = cSensorInfo.getField('IGainNormalization', sensorinfo)
+                    paz['sensitivity'] = cSensorInfo.getField('IGain', sensorinfo) \
+                                         * cDigitizerInfo.getField('sensitivity', filter)
+                    # print(paz)
+                    # print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
+                    st = read(path)
+                    ppsd = PPSD(st[0].stats, paz)
+                    ppsd.add(st)
                     try:
                         ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
                         ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
@@ -680,34 +730,79 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                             ppsd.plot_temporal(.707, filename=outfile6)
                     except Exception as ex:
                         print('质量产出图失败\n', ex)
-                fBlankTime = 0.
-                for I in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
-                    dt = (ppsd.times_data[I][0] - ppsd.times_data[I - 1][1])
-                    if dt < 0:
-                        print(dt, ppsd.times_data[I][0], ppsd.times_data[I - 1][1])
-                    else:
-                        fBlankTime += dt
-                runrate = 1.0 - fBlankTime / 86400.
-                date = datetime.date(ppsd.times_data[0][0].year, ppsd.times_data[0][0].month, ppsd.times_data[0][0].day)
-                DayData(ch, date, runrate).set_or_create_Day_data()
+                    fBlankTime = 0.
+                    # for I in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
+                    #     dt = (ppsd.times_data[I][0] - ppsd.times_data[I - 1][1])
+                    #     if dt < 0:
+                    #         print(dt, ppsd.times_data[I][0], ppsd.times_data[I - 1][1])
+                    #     else:
+                    #         fBlankTime += dt
+                    for i in range(1, len(st)):
+                        dt = st[i].stats.starttime - st[i - 1].stats.endtime
+                        if dt < 0:
+                            print(st[i].stats.starttime, st[i - 1].stats.endtime)
+                        else:
+                            fBlankTime += dt
+                    runrate = 1.0 - fBlankTime / 86400.
+                    date = datetime.date(st[0].stats.starttime.year, st[0].stats.starttime.month, st[0].stats.starttime.day)
+                    DayData(ch, date, runrate).set_or_create_Day_data()
+                else:
+                    try:
+                        # st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
+                        #         right_vertical_labels=True, number_of_ticks=10,
+                        #         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                        #         color='blue', show_y_UTC_label=True,
+                        #         title=ChName, time_offset=8,
+                        #         outfile=outfile1)
+                        sTime = st[0].stats.starttime
+                        nSample = st[0].stats.sampling_rate
+
+                        f = lambda tick: sTime.timestamp + tick
+                        xtick = np.arange(3600 * 24 + 1, step=14400)
+                        xtk = []
+                        xtk_list = []
+                        for i, x in enumerate(xtick):
+                            xtk.append(x)
+                            if i == 0:
+                                da = time.localtime(sTime.timestamp)
+                                da = time.strftime('%Y-%m-%d %H:%M:%S', da)
+                                xtk_list.append(da)
+                                continue
+                            xtk_list.append(stamp2time(f(x)))
+
+                        plt.figure(figsize=(12, 9))
+                        plt.grid(linestyle=':')
+                        plt.suptitle(ChName, fontproperties=fontTitle)
+                        for st0 in st:
+                            ssTime = (st0.stats.starttime - sTime) * nSample
+                            eeTime = (st0.stats.endtime - sTime) * nSample + 1
+                            nTime = np.arange(ssTime, eeTime)
+                            plt.plot(nTime, st0.data * MON_CHN[ChCode][1], c='blue')
+                        plt.xticks(xtk, xtk_list, fontproperties=font)
+                        plt.xlabel('时间(local time = UTC + 08:00)', fontproperties=fontTitle)
+                        plt.ylabel(MON_CHN[ChCode][0], fontproperties=fontTitle)
+                        plt.savefig(outfile1)
+                        plt.close('all')
+                    except Exception as ex:
+                        print('辅助通道产出图失败\n', ex)
         else:
             print(file, "Name is error.")
 
 
 def Net2dbDemo():
-    # updateSql()  # 删除旧数据并更新数据库
+    monMatch(MON_PATH)
     if PLATFORM == 'Windows':
         static_path = os.path.join(os.path.dirname(__file__), 'static')
         if os.path.exists('D:\\LK\\86.40新镜像程序\\源数据'):
             addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\data', static_path)
-            addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\mondata', static_path, False)
+            # addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\mondata', static_path, False)
         elif os.path.exists("E:\\86.40新镜像程序\\源数据\\ATSY"):
             addNetDemo("E:\\86.40新镜像程序\\源数据\\ATSY", static_path)
         else:
             print('Resource File not found!')
     elif PLATFORM == 'Linux':
         static_path = '/home/usrdata/usb/django/taide/static'
-        # addNetDemo('/home/usrdata/usb/data', static_path)
+        addNetDemo('/home/usrdata/usb/data', static_path)
         addNetDemo('/home/usrdata/usb/mondata', static_path, False)
 
 
@@ -715,18 +810,33 @@ def main():
     if not os.path.exists(SQL_PATH) and PLATFORM == 'Linux':
         mkfile(os.path.dirname(SQL_PATH), 0)
         os.system('sudo cp /home/usrdata/pi/tde/params/db.sqlite3 %s' % os.path.dirname(SQL_PATH))
-    isnewSql()  # 更新626为324-2020
+    # updateSql()  # 删除旧数据并更新数据库
+    # isnewSql()  # 更新626为324-2020
+    sTime = datetime.datetime.now()
     Net2dbDemo()
+    eTime = datetime.datetime.now()
+    print('用时：%s' % (eTime-sTime))
 
 
 if __name__ == "__main__":
+    MON_CHN = {}
+    MON_KEYS = ('MONITOR1', 'MONITOR2', 'MONITOR3', 'MONITOR4', 'MONITOR5',
+                'MONITOR6', 'MONITOR7', 'MONITOR8', 'MONITOR9', 'MONITOR10')
+    MON_DIST = {'MONITOR1': ('UD1零位幅值(V)', 0.1), 'MONITOR2': ('NS1零位幅值(V)', 0.1),
+                'MONITOR3': ('EW1零位幅值(V)', 0.1), 'MONITOR4': ('UD2零位幅值(V)', 0.1),
+                'MONITOR5': ('NS2零位幅值(V)', 0.1), 'MONITOR6': ('EW2零位幅值(V)', 0.1),
+                'MONITOR7': ('供电电压(V)', 0.001), 'MONITOR8': ('供电电流(A)', 0.00001),
+                'MONITOR9': ('主板温度(°C)', 1), 'MONITOR10': ('采集器温度(°C)', 1)}
     if platform.system() == 'Windows':
         PLATFORM = 'Windows'
         SQL_PATH = 'D:/django/trunk/db.sqlite3'
+        MON_PATH = 'monitor.ini'
         sys.path.append('D:/django/trunk/')
     elif platform.system() == 'Linux':
         PLATFORM = 'Linux'
         SQL_PATH = '/home/usrdata/usb/django/taide/db.sqlite3'
+        MON_PATH = '/home/usrdata/pi/tde/params/monitor.ini'
         sys.path.append('/home/usb/django/taide/')
-    from doobspy import parser_sensor_resp, parser_digitizer_resp
+    # from doobspy import parser_sensor_resp, parser_digitizer_resp
+
     main()
