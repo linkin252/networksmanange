@@ -11,16 +11,60 @@ import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 
 from obspy import read
-# from obspy.io.xseed import Parser
-# from obspy import read_inventory
 from obspy.signal import PPSD
 from obspy.imaging.cm import pqlx
 
 import datetime
 import os
-import sys
+import sys, getopt
 import platform
 import sqlite3
+
+MON_CHN = {}
+MON_KEYS_CI = ('MONITOR1', 'MONITOR2', 'MONITOR3', 'MONITOR4', 'MONITOR5',
+            'MONITOR6', 'MONITOR7')
+MON_DIST_CI = {'MONITOR1': ('UD1零位', 0.001, '幅值(V)'), 'MONITOR2': ('NS1零位', 0.001, '幅值(V)'),
+            'MONITOR3': ('EW1零位', 0.001, '幅值(V)'), 'MONITOR4': ('供电电压', 0.001, '电压(V)'),
+            'MONITOR5': ('供电电流', 0.00001, '电流(A)'), 'MONITOR6': ('主板温度', 0.01, '温度(°C)'),
+            'MONITOR7': ('CPU温度', 0.01, '温度(°C)')}
+MON_KEYS_FI = ('MONITOR1', 'MONITOR2', 'MONITOR3', 'MONITOR4', 'MONITOR5',
+            'MONITOR6', 'MONITOR7', 'MONITOR8', 'MONITOR9', 'MONITOR10')
+MON_DIST_FI = {'MONITOR1': ('UD1零位', 0.001, '幅值(V)'), 'MONITOR2': ('NS1零位', 0.001, '幅值(V)'),
+            'MONITOR3': ('EW1零位', 0.001, '幅值(V)'), 'MONITOR4': ('UD2零位', 0.001, '幅值(V)'),
+            'MONITOR5': ('NS2零位', 0.001, '幅值(V)'), 'MONITOR6': ('EW2零位', 0.001, '幅值(V)'),
+            'MONITOR7': ('供电电压', 0.001, '电压(V)'), 'MONITOR8': ('供电电流', 0.00001, '电流(A)'),
+            'MONITOR9': ('主板温度', 0.01, '温度(°C)'), 'MONITOR10': ('CPU温度', 0.01, '温度(°C)')}
+DAS_2020_LIST = ('TDE-626CI-2', 'TDE-626FI-2')  # 新版324-2020数采
+MONITOR2_LIST = ('TDPP-800', )  # 电源控制器2020
+
+if platform.system() == 'Windows':
+    PLATFORM = 'Windows'
+    SQL_PATH = 'D:/django/trunk/db.sqlite3'
+    MON_PATH = 'D:/django/trunk/params/monitor.ini'
+    PI_PATH = 'D:/django/trunk/params/pi.ini'
+    RES_PATH = 'D:/django/trunk/params/response.ini'
+    cf = configparser.ConfigParser()
+    cf.read(PI_PATH)
+    if cf.getint('PI_PAR', 'CHN_NUM') == 3:
+        AD_TYPE = 0
+    else:
+        AD_TYPE = 1
+    STA_TYPE = cf.get('PI_PAR', 'STA_TYPE')
+    sys.path.append('D:/django/trunk/')
+elif platform.system() == 'Linux':
+    PLATFORM = 'Linux'
+    SQL_PATH = '/home/usrdata/usb/django/taide/db.sqlite3'
+    MON_PATH = '/home/usrdata/pi/tde/params/monitor.ini'
+    PI_PATH = '/home/usrdata/pi/tde/params/pi.ini'
+    RES_PATH = '/home/usrdata/pi/tde/params/response.ini'
+    cf = configparser.ConfigParser()
+    cf.read(PI_PATH)
+    if cf.getint('PI_PAR', 'CHN_NUM') == 3:
+        AD_TYPE = 0
+    else:
+        AD_TYPE = 1
+    STA_TYPE = cf.get('PI_PAR', 'STA_TYPE')
+    sys.path.append('/home/usb/django/taide/')
 
 
 class SetDB:
@@ -36,10 +80,34 @@ class SetDB:
 
 
 class Instruments_base(SetDB):
+    def __init__(self):
+        super().__init__()
+        self.table = 'instruments_instruments_base'
+
     def getField(self, field, name):
         sql = 'SELECT %s from instruments_instruments_base where Name="%s"' % (field, name)
         ret = self.selCmd(sql)
         return ret
+
+    def getid(self, field):
+        sql = f'SELECT id from {self.table} where Name="{field}"'
+        ret = self.selCmd(sql)
+        return ret
+
+    def delInst(self, Name):
+        instruments_base_ptr_id = self.getid(Name)
+        sensorinfo = SensorInfo()
+        sensor_info_id = sensorinfo.getid(instruments_base_ptr_id)
+        sql = f'DELETE FROM instruments_zeropole where sensor_info_id="{sensor_info_id}"'
+        self.c.execute(sql)
+        sql = f'DELETE FROM instruments_sensor_info where id="{sensor_info_id}"'
+        self.c.execute(sql)
+        sql = f'DELETE FROM instruments_sensor_base where instruments_base_ptr_id="{instruments_base_ptr_id}"'
+        self.c.execute(sql)
+        sql = f'DELETE FROM {self.table} where id="{instruments_base_ptr_id}"'
+        self.c.execute(sql)
+        self.conn.commit()
+
 
 
 class Chg626(Instruments_base):
@@ -66,13 +134,13 @@ class Chg626(Instruments_base):
             self.c.execute(sql)
 
     def create_png(self):
-        sName = '泰德 TDE-324-2020'
+        sName = '泰德 TDE-324'
         for id in range(85, 97):
             sql = 'SELECT IParUrl FROM instruments_digitizer_filter where id=%d' % id
             parurl = self.selCmd(sql)
             if PLATFORM == 'Windows':
                 dir = os.path.join('D:/django/trunk/static', parurl)
-                (sample_rate, sensitivity) = parser_digitizer_resp(dir, sName)
+                (sample_rate, sensitivity) = self.parser_digitizer_resp(dir, sName)
             else:
                 dir = '/home/usb/django/taide/static/' + parurl.replace('\\', '/')
                 (sample_rate, sensitivity) = self.parser_digitizer_resp(dir, sName)
@@ -80,8 +148,7 @@ class Chg626(Instruments_base):
             print(sample_rate, sensitivity)
 
     def plot_Digitizer_Freq_Amp(self, pltfile, sName, sample_rate, sensitivity, h, f):
-        font = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=12)
-        fontTitle = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=18)
+        (font, fontTitle) = setFont()
         plt.figure(figsize=(16, 12))
         plt.grid(linestyle=':')
         plt.semilogy(f, abs(h))
@@ -116,6 +183,27 @@ class Chg626(Instruments_base):
         response, freqs = resp.get_evalresp_response(1. / (sample_rate * 2.), 65536 * 16, output="VEL")
         self.plot_Digitizer_Freq_Amp(dir + '.freq_amp.png', sName, sample_rate, sensitivity, response, freqs)
         return (sample_rate, sensitivity)
+
+
+class Company(SetDB):
+    def __init__(self, Name, ChnName=''):
+        self.Name = Name
+        self.ChnName = ChnName
+        super().__init__()
+
+    def get_company(self):
+        sql = 'SELECT id from instruments_company where Name="%s"' % self.Name
+        Name = self.selCmd(sql)
+        return Name
+
+    def set_company(self):
+        sql = 'INSERT INTO instruments_company (Name,ChnName,CIcon,CWeb,CInfo,CNational_id) VALUES ' \
+              f'("{self.Name}", "{self.ChnName}", "company\\{self.Name}\\{self.Name}_icon.png", ' \
+              f'"http://www.{self.Name}.cn", "company\\{self.Name}\\{self.Name}_info.txt", 1)'
+        print(sql)
+        self.c.execute(sql)
+        self.conn.commit()
+
 
 
 class Network(SetDB):
@@ -267,11 +355,15 @@ class DigitizerInfo(Instruments_base):
 
 
 class SensorInfo(Instruments_base):
-    def __init__(self, Name='TDV-60B', Freq='', Sensitivity=''):
+    def __init__(self, Name='TDV-60B', Freq='', Sensitivity='', resp=None):
         super().__init__()
+        if resp is None:
+            resp = {}
+        self.table = 'instruments_sensor_info'
         self.Name = Name
         self.Freq = Freq
         self.Sensitivity = Sensitivity
+        self.resp = resp
 
     def getSensorInfo(self):
         sensor = None
@@ -295,11 +387,59 @@ class SensorInfo(Instruments_base):
                 return False, sensor, sensorinfo
         return True, sensor, sensorinfo
 
+    def setSensorInfo(self):
+        ICompany_id = Company(self.resp['company']).get_company()
+
+        sql = 'INSERT INTO instruments_instruments_base ' \
+              '(Name, IMainType, IDBOK, IDir, MainChannel, AuxChannel, ICompany_id) ' \
+              f'VALUES ("{self.Name}", {self.resp["mode"]}, 1, "instruments\sensor\\{self.resp["company"]}\\{self.Name}", ' \
+              f'3, 3, {ICompany_id})'
+        self.c.execute(sql)
+        self.conn.commit()
+
+        sensor_id = Instruments_base().getid(self.Name)
+        sql = f'INSERT INTO instruments_sensor_base (instruments_base_ptr_id) VALUES ({sensor_id})'
+        self.c.execute(sql)
+        self.conn.commit()
+
+        selunit = lambda x: 'V/M/S' if x == 1000 else 'V/M/S**2'
+        sql = f'INSERT INTO {self.table} ' \
+              '(ISensitivityInfo, IParUrl, IFreqInfo, IGainNormalization, IGain, ZeroNum, PoleNum, Sensor_id) ' \
+              f'VALUES ("{self.resp["gain0"]}{selunit(self.resp["mode"])}", ' \
+              f'"instruments\sensor\\{self.resp["company"]}\\{self.Name}\\{self.Name}", ' \
+              f'"{self.resp["freq"]}Hz", {self.resp["gainno0"]}, {self.resp["gain0"]}, {self.resp["zerono0"]}, ' \
+              f'{self.resp["poleno0"]}, {sensor_id})'
+        self.c.execute(sql)
+        self.conn.commit()
+
+        sensor_info_id = self.getid(sensor_id)
+        if self.resp["zerono0"]:
+            gp = self.resp["zerogp0"]
+            for i in range(0, len(gp), 2):
+                sql = 'INSERT INTO instruments_zeropole (nZPMode, fReal, fImag, sComplex, sensor_info_id) ' \
+                      f'VALUES ({0}, {gp[i]}, {gp[i+1]}, "{gp[i]}+{gp[i+1]}j", {sensor_info_id})'
+                self.c.execute(sql)
+        if self.resp["poleno0"]:
+            gp = self.resp["polegp0"]
+            for i in range(0, len(gp), 2):
+                sql = 'INSERT INTO instruments_zeropole (nZPMode, fReal, fImag, sComplex, sensor_info_id) ' \
+                      f'VALUES ({1}, {gp[i]}, {gp[i+1]}, "{gp[i]}+{gp[i+1]}j", {sensor_info_id})'
+                self.c.execute(sql)
+        self.conn.commit()
+
+    def delSensorInfo(self):
+        pass
+
+    def getid(self, field):
+        sql = f'SELECT id from {self.table} where Sensor_id="{field}"'
+        ret = self.selCmd(sql)
+        return ret
+
     def getField(self, field, name):  # 获取仪器类型
         try:
-            sql = 'SELECT %s from instruments_sensor_info where id="%d"' % (field, name)
+            sql = f'SELECT {field} from {self.table} where id="{name}"'
             ret = self.selCmd(sql)
-        except TypeError:
+        except:
             ret = super().getField(field, self.Name)
         return ret
 
@@ -401,7 +541,7 @@ class DayData(SetDB):
         return data_id
 
 
-class ZeroPoles(SetDB):
+class ZeroPoles(SensorInfo):
     pass
 
 
@@ -441,6 +581,43 @@ class Poles(ZeroPoles):
         return pole_list
 
 
+class selopt:
+    def __init__(self, daycount=0):
+        monMatch(MON_PATH)
+        if PLATFORM == 'Windows':
+            if STA_TYPE in MONITOR2_LIST:
+                static_path = 'D:\\LK\\TDPP\\产出数据'
+                srcdir = 'D:\\LK\\TDPP\\源数据'
+            else:
+                static_path = 'D:\\LK\\86.40新镜像程序\\产出数据'
+                srcdir = 'D:\\LK\\86.40新镜像程序\\源数据'
+        else:
+            static_path = '/home/usrdata/usb/django/taide/static'
+            srcdir = '/home/usrdata/usb'
+        self.produce = Produce(srcdir, static_path, daycount=daycount)
+        self.pro_flag = True
+        if not os.path.exists(srcdir):
+            self.pro_flag = False
+
+    def opts_(self, opt):
+        if self.pro_flag:
+            if STA_TYPE in DAS_2020_LIST:
+                if opt == 'all':
+                    self.produce.addData()
+                    self.produce.addMonData()
+                elif opt == 'data':
+                    self.produce.addData()
+                elif opt == 'mondata':
+                    self.produce.addMonData()
+                elif opt == 'qdata':
+                    self.produce.addData(1)
+            elif STA_TYPE in MONITOR2_LIST:
+                self.produce.tdppdata()
+
+        else:
+            print('Resource File not found!')
+
+
 def mkfile(path, mode):
     if not os.path.exists(path):
         if mode == 0:
@@ -463,10 +640,15 @@ def show_path(path, all_files, all_paths):
     return all_files, all_paths
 
 
-def countDay_1OfYear(now):
+def yes_count(now):
+    """
+    判断昨天日期天数
+    @param now: 今天日期
+    @return: 昨天日期的天数
+    """
     dayCount = now - datetime.date(now.year - 1, 12, 31)  # 减去上一年最后一天
     if dayCount.days == 1:
-        dayCount = countDay_1OfYear(datetime.date(now.year - 1, 12, 31))
+        dayCount = yes_count(datetime.date(now.year - 1, 12, 31))
     elif dayCount.days == 365 or dayCount.days == 366:
         return dayCount
     else:
@@ -475,37 +657,66 @@ def countDay_1OfYear(now):
 
 
 def updateSql():
+    """
+    清空本地台站数据库数据
+    """
     table_list = ('networks_network', 'networks_station', 'networks_sta_adsensor',
                   'networks_channel', 'networks_day_data', 'instruments_ad_sensor')
     for table in table_list:
         DeleteSql().updateid(table)
 
+def clearSql():
+    """
+    清空本地台站数据库数据
+    """
+    table_list = ('networks_day_data', )
+    for table in table_list:
+        DeleteSql().updateid(table)
 
-# 匹配通道名和通道摆类型
+
 def chnMatch(path, chn_list):
+    """
+    匹配通道名和通道摆类型
+    @param path: pi.ini路径
+    @param chn_list: 匹配列表
+    @return:匹配列表
+    """
     cf = configparser.ConfigParser()
     cf.read(path)
+    chn_num = cf.getint('PI_PAR', 'CHN_NUM')
     chn = [['CHN0_CODE', 'CHN0_TYPE'], ['CHN1_CODE', 'CHN1_TYPE'], ['CHN2_CODE', 'CHN2_TYPE'],
            ['CHN3_CODE', 'CHN3_TYPE'], ['CHN4_CODE', 'CHN4_TYPE'], ['CHN5_CODE', 'CHN5_TYPE']]
-    if cf.getint('PI_PAR', 'CHN_NUM') == 3:
+    if chn_num == 3:
         for i in range(0, 3):
             if cf.getint('PI_PAR', chn[i][1]) == 1:
                 chn[i].append('V')
             elif cf.getint('PI_PAR', chn[i][1]) == 2:
                 chn[i].append('A')
+            else:
+                chn[i].append('A')
             chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
-    elif cf.getint('PI_PAR', 'CHN_NUM') == 6:
+    elif chn_num == 6:
         for i in range(0, 6):
             if cf.getint('PI_PAR', chn[i][1]) == 1:
                 chn[i].append('V')
             elif cf.getint('PI_PAR', chn[i][1]) == 2:
                 chn[i].append('A')
+            else:
+                chn[i].append('A')
             chn_list.append([cf.get('PI_PAR', chn[i][0]), chn[i][2]])
+    else:
+        for i in range(chn_num):
+            chn_list.append([cf.get('PI_PAR', f'CHN{i}_CODE'), 'A'])
     return chn_list
 
 
-# 添加电压/电流标定，标定灵敏度
 def senMatch(path, chn_list):
+    """
+    添加电压/电流标定，标定灵敏度
+    @param path: response.ini路径
+    @param chn_list: 匹配列表
+    @return: 匹配列表
+    """
     f = open(path, 'r')
     for readline in f.readlines():
         if 'SENSOR0_TYPE' in readline:
@@ -519,12 +730,23 @@ def senMatch(path, chn_list):
 
 # 修改数据库626为324-2020
 def isnewSql():
+    # from obspy.io.xseed.parser import Parser
+    # from obspy import read_inventory
     chg626 = Chg626()
-    chg626.isExists626()
+    chg626.create_png()
 
 
 def monMatch(path):
+    cf = configparser.ConfigParser()
+    cf.read(PI_PATH)
+    sta_type = cf.get('PI_PAR', 'STA_TYPE')
     mon_dist = {}
+    if sta_type in {'TDE-624FI', 'TDE-626FI-2'}:
+        MON_KEYS = MON_KEYS_FI
+        MON_DIST = MON_DIST_FI
+    else:
+        MON_KEYS = MON_KEYS_CI
+        MON_DIST = MON_DIST_CI
     for mon in MON_KEYS:
         mon_dist.setdefault(mon, '')
     if os.path.exists(path):
@@ -546,11 +768,11 @@ def stamp2time(stamp):
 def setFont():
     sys = platform.system()
     if sys == "Windows":
-        font = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=12)
-        fontTitle = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=18)
+        font = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=9)
+        fontTitle = FontProperties(fname=r"c:\\windows\\fonts\\simhei.ttf", size=12)
     else:
-        font = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=12)
-        fontTitle = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=18)
+        font = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=9)
+        fontTitle = FontProperties(fname=r"/usr/share/fonts/SIMHEI.TTF", size=12)
     return font, fontTitle
 
 
@@ -596,7 +818,340 @@ def mulRate(st):
         return st
 
 
-def addNetDemo(fSrcDir, static_path, flag=True):
+class Produce:
+    def __init__(self, fSrcDir, static_path, daycount=0):
+        self.STATIC_PATH = static_path
+        self.sDenDir = 'networks'
+        self.fDenDir = os.path.join(self.STATIC_PATH, self.sDenDir)
+        self.fSrcDir = fSrcDir
+        self.DATA_PATH = os.path.join(fSrcDir, 'data')
+        self.MON_PATH = os.path.join(fSrcDir, 'mondata')
+        mkfile(self.fDenDir, 0)
+        self.chn_list = []
+        self.sensortype = 'TMA-33'
+        (self.font, self.fontTitle) = setFont()
+        if daycount != 0:
+            self.dayCount = daycount
+        else:
+            self.dayCount = yes_count(datetime.date.today())
+        if PLATFORM == 'Windows':
+            self.chn_list = chnMatch(PI_PATH, self.chn_list)
+            self.chn_list = senMatch(RES_PATH, self.chn_list)
+        else:
+            if os.path.exists('/home/pi/tde/params/pi.ini'):
+                self.chn_list = chnMatch('/home/pi/tde/params/pi.ini', self.chn_list)
+            if os.path.exists('/home/pi/tde/params/response.ini'):
+                self.chn_list = senMatch('/home/pi/tde/params/response.ini', self.chn_list)
+            else:
+                print('params files is not exists!')
+
+    def addData(self, mod=11):
+        all_files = []
+        all_paths = []
+        all_files, all_paths = show_path(self.DATA_PATH, all_files, all_paths)
+        for I in range(0, len(all_files)):
+            file = all_files[I]
+            path = all_paths[I]
+            if file.count('.') == 6:
+                (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
+                if (int(nDay) == self.dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(
+                        ChCode) <= 3 and DataCode == 'D'
+                        and len(nYear) <= 4 and len(nDay) <= 3):
+                    # net = Network(NetCode, NetCode, fSrcDir, sDenDir, 3).get_or_create_Network()
+                    # sta = Station(net, StaCode, StaCode).get_or_create_Station()
+                    cDigitizerInfo = DigitizerInfo('TDE-324', '10Vpp', '100Hz', 'Linear')
+                    (bRet, AD, gain, rate, filter) = cDigitizerInfo.getDigitizerInfo()
+                    if not bRet:
+                        print('Digitizer not found!')
+                        continue
+
+                    sDenDir2 = self.sDenDir + '/' + NetCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + StaCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nYear
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nDay
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    try:
+                        st = read(path)
+                    except Exception as ex:
+                        print('%s数据读取错误\n' % file, ex)
+                        continue
+                    ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
+                    outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
+                    outfile2 = fDenDir + '/' + ChName + '.day_wave.low_pass_0.2Hz.png'
+                    outfile3 = fDenDir + '/' + ChName + '.day_wave.high_pass_0.2Hz.png'
+                    outfile4 = fDenDir + '/' + ChName + '.ppsd.png'
+                    outfile5 = fDenDir + '/' + ChName + '.spectrogram.png'
+
+                    print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
+                    st = mulRate(st)
+                    if 11 & mod >> 1:
+                        try:
+                            st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                                    right_vertical_labels=True,
+                                    vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
+                                    color=["r", "b", "g"], show_y_UTC_label=True,
+                                    title=ChName, time_offset=8,
+                                    outfile=outfile1)
+                            st2 = st.copy()
+                            st.filter("lowpass", freq=0.2, corners=2)
+                            st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                                    right_vertical_labels=True,
+                                    vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
+                                    color=["r", "b", "g"], show_y_UTC_label=True,
+                                    title=ChName + '.low_pass 0.2Hz', time_offset=8,
+                                    outfile=outfile2)
+
+                            st2.filter("highpass", freq=0.2)
+                            st2.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                                     right_vertical_labels=True,
+                                     vertical_scaling_range=st2[0].data.std() * 40, one_tick_per_line=True,
+                                     color=["r", "b", "g"], show_y_UTC_label=True,
+                                     # events={"min_magnitude": 5},
+                                     title=ChName + '.high_pass 0.2Hz', time_offset=8,
+                                     outfile=outfile3)
+                        except Exception as ex:
+                            print('主通道产出图失败\n', ex)
+                    if 11 & mod:
+                        for chn in self.chn_list:
+                            if ChCode == chn[0] and len(chn) >= 3:
+                                sensortype = chn[2]
+                            else:
+                                sensortype = 'TMA-33'
+                        cSensorInfo = SensorInfo(sensortype)
+                        (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
+                        if not bRet:
+                            print('Sensor not found! use TMA-33')
+                            cSensorInfo = SensorInfo('TMA-33')
+                            (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
+                        # adsensor = ADSensor(filter, sensorinfo).get_ADSensor()
+                        # sta_adsensor = Sta_ADSensor(sta, adsensor).get_or_create_Sta_ADSensor()
+                        ch = Channel(1, LocCode, ChCode).get_or_create_CH()
+                        print(ChCode, sensortype)
+
+                        paz = {}
+                        paz['zeros'] = []
+                        paz['zeros'] = Zeros(sensorinfo).getZero()
+                        paz['poles'] = []
+                        paz['poles'] = Poles(sensorinfo).getPole()
+                        if 2000 <= cSensorInfo.getField('IMainType', sensor) <= 3000:
+                            paz['zeros'].append(complex(0., 0))
+                        paz['gain'] = cSensorInfo.getField('IGainNormalization', sensorinfo)
+                        paz['sensitivity'] = cSensorInfo.getField('IGain', sensorinfo) \
+                                             * cDigitizerInfo.getField('sensitivity', filter)
+                        # print(paz)
+                        # print('len=',len(ppsd.times_data),ppsd.times_data[0][0],ppsd.times_data[0][1])
+                        st = read(path)
+                        ppsd = PPSD(st[0].stats, paz)
+                        ppsd.add(st)
+                        try:
+                            ppsd.plot(outfile4, xaxis_frequency=True, cmap=pqlx)
+                            ppsd.plot_spectrogram(filename=outfile5, cmap='CMRmap_r')
+                            if cSensorInfo.getField('IMainType', sensor) < 2000:
+                                outfile6 = fDenDir + '/' + ChName + '.1-2s.sp.png'
+                                ppsd.plot_temporal(1.414, filename=outfile6)
+                            elif 2000 <= cSensorInfo.getField('IMainType', sensor) < 3000:  # 加速度模式)
+                                outfile6 = fDenDir + '/' + ChName + '.1-2Hz.sp.png'
+                                ppsd.plot_temporal(.707, filename=outfile6)
+                        except Exception as ex:
+                            print('质量产出图失败\n', ex)
+                        fBlankTime = 0.
+                        # for I in range(1, len(ppsd.times_data)):  # 1个整时间段说明未丢数
+                        #     dt = (ppsd.times_data[I][0] - ppsd.times_data[I - 1][1])
+                        #     if dt < 0:
+                        #         print(dt, ppsd.times_data[I][0], ppsd.times_data[I - 1][1])
+                        #     else:
+                        #         fBlankTime += dt
+                        for i in range(1, len(st)):
+                            dt = st[i].stats.starttime - st[i - 1].stats.endtime
+                            if dt < 0:
+                                print(st[i].stats.starttime, st[i - 1].stats.endtime)
+                            else:
+                                fBlankTime += dt
+                        runrate = 1.0 - fBlankTime / 86400.
+                        date = datetime.date(st[0].stats.starttime.year, st[0].stats.starttime.month,
+                                             st[0].stats.starttime.day)
+                        DayData(ch, date, runrate).set_or_create_Day_data()
+
+    def addMonData(self):
+        all_files = []
+        all_paths = []
+        all_files, all_paths = show_path(self.MON_PATH, all_files, all_paths)
+        for I in range(0, len(all_files)):
+            file = all_files[I]
+            path = all_paths[I]
+            if file.count('.') == 6:
+                (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
+                if (int(nDay) == self.dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(
+                        ChCode) <= 3 and DataCode == 'D'
+                        and len(nYear) <= 4 and len(nDay) <= 3):
+
+                    sDenDir2 = self.sDenDir + '/' + NetCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + StaCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nYear
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nDay
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    try:
+                        st = read(path)
+                    except Exception as ex:
+                        print('%s数据读取错误\n' % file, ex)
+                        continue
+                    ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
+                    outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
+
+                    print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
+                    try:
+                        sTime = st[0].stats.starttime
+                        nSample = st[0].stats.sampling_rate
+
+                        f = lambda tick: sTime.timestamp + tick
+                        xtick = np.arange(3600 * 24 + 1, step=14400)
+                        xtk = []
+                        xtk_list = []
+                        mon_name = MON_CHN[ChCode][0]
+                        mon_weight = MON_CHN[ChCode][1]
+                        mon_units = MON_CHN[ChCode][2]
+                        if re.search(r"[°CAV]+", MON_CHN[ChCode][2]).group():
+                            mon_unit = re.search(r"[°CAV]+", MON_CHN[ChCode][2]).group()  # °C
+                        else:
+                            mon_unit = ''  # °C
+                        max_data = max(st.max()) * mon_weight
+                        min_data = min([min(tr) for tr in st]) * mon_weight
+                        avg_data = (max_data + min_data) / 2
+                        daystr = datetime.datetime.now().strftime('%Y-%m-%d')
+                        timestr = "Created by 泰德, " + daystr
+                        for i, x in enumerate(xtick):
+                            xtk.append(x)
+                            xtk_list.append(stamp2time(f(x)))
+                        plt.figure(figsize=(8, 6))
+                        plt.grid(linestyle=':')
+                        for st0 in st:
+                            mon_data = st0.data * mon_weight
+                            ssTime = (st0.stats.starttime - sTime) * nSample
+                            eeTime = (st0.stats.endtime - sTime) * nSample + 1
+                            nTime = np.arange(ssTime, eeTime)
+                            plt.plot(nTime, mon_data, c='blue')
+                            # if (plt.axis()[-1] - plt.axis()[-2]) <= 1:
+                            #     plt.ylim(ymin=(plt.axis()[-2]-0.5), ymax=(plt.axis()[-1]+0.5))
+                            # if 1< (plt.axis()[-1] - plt.axis()[-2]) <= 10:
+                            #     plt.ylim(ymin=(plt.axis()[-2]-10), ymax=(plt.axis()[-1]+10))
+                        plt.xticks(xtk, xtk_list, fontproperties=self.font)
+                        x0 = '                                                       时间                         ' + timestr
+                        plt.xlabel(x0, fontproperties=self.font)
+                        plt.ylabel(mon_units, fontproperties=self.font)
+                        titles = '%s %s %s\n最小值:%.4f%s, 最大值:%.4f%s, 平均值:%.4f%s' % \
+                                 (daystr, ChName, mon_name, min_data, mon_unit, max_data, mon_unit, avg_data, mon_unit)
+                        plt.suptitle(titles, fontproperties=self.fontTitle)
+                        plt.savefig(outfile1)
+                        plt.close('all')
+                    except Exception as ex:
+                        print('辅助通道产出图失败\n', ex)
+            else:
+                pass
+
+    def tdppdata(self):
+        all_files = []
+        all_paths = []
+        all_files, all_paths = show_path(self.DATA_PATH, all_files, all_paths)
+        for I in range(0, len(all_files)):
+            file = all_files[I]
+            path = all_paths[I]
+            if file.count('.') == 6:
+                (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
+                if (int(nDay) == self.dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(
+                        LocCode) <= 2 and len(
+                        ChCode) <= 3 and DataCode == 'D'
+                        and len(nYear) <= 4 and len(nDay) <= 3):
+
+                    sDenDir2 = self.sDenDir + '/' + NetCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + StaCode
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nYear
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    sDenDir2 = sDenDir2 + '/' + nDay
+                    fDenDir = os.path.join(self.STATIC_PATH, sDenDir2)
+                    mkfile(fDenDir, 0)
+
+                    try:
+                        st = read(path)
+                    except Exception as ex:
+                        print('%s数据读取错误\n' % file, ex)
+                        continue
+                    ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
+                    outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
+
+                    print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
+                    st = mulRate(st)
+                    try:
+                        # st.plot(size=(960, 800), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                        #         right_vertical_labels=True,
+                        #         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
+                        #         color=["r", "b", "g"], show_y_UTC_label=True,
+                        #         title=ChName, time_offset=8,
+                        #         outfile=outfile1)
+                        sTime = st[0].stats.starttime
+                        nSample = st[0].stats.sampling_rate
+                        f = lambda tick: sTime.timestamp + tick
+                        xtick = np.arange(3600 * 24 + 1, step=14400)
+                        xtk = []
+                        xtk_list = []
+                        daystr = datetime.datetime.now().strftime('%Y-%m-%d')
+                        timestr = "Created by 泰德, " + daystr
+                        titles = ChName
+                        for i, x in enumerate(xtick):
+                            xtk.append(x)
+                            xtk_list.append(stamp2time(f(x)))
+                        plt.figure(figsize=(12, 3.5))
+                        plt.grid(linestyle=':')
+                        for st0 in st:
+                            mon_data = st0.data
+                            ssTime = (st0.stats.starttime - sTime) * nSample
+                            eeTime = (st0.stats.endtime - sTime) * nSample + 1
+                            nTime = np.arange(ssTime, eeTime)
+                            plt.plot(nTime, mon_data, c='blue')
+                        #     x.extend(nTime)
+                        #     y.extend(mon_data)
+                        # plt.plot(x, y, c='blue')
+                        plt.xticks(xtk, xtk_list, fontproperties=self.font)
+                        x0 = ' '*75 + '时间' + ' '*40 + timestr
+                        plt.xlabel(x0, fontproperties=self.font)
+                        plt.ylabel('幅值（Ct）', fontproperties=self.font)
+                        plt.suptitle(titles, fontproperties=self.fontTitle)
+                        plt.savefig(outfile1)
+                        plt.close('all')
+                    except Exception as ex:
+                        print('tdpp产出图失败\n', ex)
+
+
+def addNetDemo(fSrcDir, static_path, daycount=0, mod=11):
     STATIC_PATH = static_path
     sDenDir = 'networks'
     fDenDir = os.path.join(STATIC_PATH, sDenDir)
@@ -605,22 +1160,24 @@ def addNetDemo(fSrcDir, static_path, flag=True):
     all_paths = []
     chn_list = []
     sensortype = 'TMA-33'
-    if os.path.exists('pi.ini'):
-        chn_list = chnMatch('pi.ini', chn_list)
-        chn_list = senMatch('response.ini', chn_list)
-    elif os.path.exists('/home/pi/tde/params/pi.ini') and os.path.exists('/home/pi/tde/params/response.ini'):
-        chn_list = chnMatch('/home/pi/tde/params/pi.ini', chn_list)
-        chn_list = senMatch('/home/pi/tde/params/response.ini', chn_list)
+    if daycount != 0:
+        dayCount = daycount
+    else:
+        dayCount = yes_count(datetime.date.today())
+    if os.path.exists(PI_PATH):
+        chn_list = chnMatch(PI_PATH, chn_list)
+        chn_list = senMatch(RES_PATH, chn_list)
+    elif os.path.exists(PI_PATH) and os.path.exists(RES_PATH):
+        chn_list = chnMatch(PI_PATH, chn_list)
+        chn_list = senMatch(RES_PATH, chn_list)
     else:
         print('params files is not exists!')
         return
-    (font, fontTitle) = setFont()
     all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
     for I in range(0, len(all_files)):
         file = all_files[I]
         path = all_paths[I]
-        if file.count('.') >= 6:
-            dayCount = countDay_1OfYear(datetime.date.today())
+        if file.count('.') == 6:
             (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
             if (int(nDay) == dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(
                     ChCode) <= 3 and DataCode == 'D'
@@ -662,10 +1219,10 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                 outfile5 = fDenDir + '/' + ChName + '.spectrogram.png'
 
                 print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
-                if flag:
-                    st = mulRate(st)
+                st = mulRate(st)
+                if 11&mod >> 1:
                     try:
-                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                        st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
                                 right_vertical_labels=True,
                                 vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
                                 color=["r", "b", "g"], show_y_UTC_label=True,
@@ -673,7 +1230,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                                 outfile=outfile1)
                         st2 = st.copy()
                         st.filter("lowpass", freq=0.2, corners=2)
-                        st.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                        st.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
                                 right_vertical_labels=True,
                                 vertical_scaling_range=st[0].data.std() * 40, one_tick_per_line=True,
                                 color=["r", "b", "g"], show_y_UTC_label=True,
@@ -681,7 +1238,7 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                                 outfile=outfile2)
 
                         st2.filter("highpass", freq=0.2)
-                        st2.plot(size=(800, 600), tick_format='%I:%M:%p', type="dayplot", interval=30,
+                        st2.plot(size=(1600, 1200), tick_format='%I:%M:%p', type="dayplot", interval=30,
                                  right_vertical_labels=True,
                                  vertical_scaling_range=st2[0].data.std() * 40, one_tick_per_line=True,
                                  color=["r", "b", "g"], show_y_UTC_label=True,
@@ -690,9 +1247,12 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                                  outfile=outfile3)
                     except Exception as ex:
                         print('主通道产出图失败\n', ex)
+                if 11&mod:
                     for chn in chn_list:
-                        if ChCode == chn[0]:
+                        if ChCode == chn[0] and len(chn) >= 3:
                             sensortype = chn[2]
+                        else:
+                            sensortype = 'TMA-33'
                     cSensorInfo = SensorInfo(sensortype)
                     (bRet, sensor, sensorinfo) = cSensorInfo.getSensorInfo()
                     if not bRet:
@@ -746,97 +1306,193 @@ def addNetDemo(fSrcDir, static_path, flag=True):
                     runrate = 1.0 - fBlankTime / 86400.
                     date = datetime.date(st[0].stats.starttime.year, st[0].stats.starttime.month, st[0].stats.starttime.day)
                     DayData(ch, date, runrate).set_or_create_Day_data()
-                else:
-                    try:
-                        # st.plot(size=(800, 600), tick_format='%I:%M:%p', type="normal", interval=30,
-                        #         right_vertical_labels=True, number_of_ticks=10,
-                        #         vertical_scaling_range=st[0].data.std() * 20, one_tick_per_line=True,
-                        #         color='blue', show_y_UTC_label=True,
-                        #         title=ChName, time_offset=8,
-                        #         outfile=outfile1)
-                        sTime = st[0].stats.starttime
-                        nSample = st[0].stats.sampling_rate
-
-                        f = lambda tick: sTime.timestamp + tick
-                        xtick = np.arange(3600 * 24 + 1, step=14400)
-                        xtk = []
-                        xtk_list = []
-                        for i, x in enumerate(xtick):
-                            xtk.append(x)
-                            if i == 0:
-                                da = time.localtime(sTime.timestamp)
-                                da = time.strftime('%Y-%m-%d %H:%M:%S', da)
-                                xtk_list.append(da)
-                                continue
-                            xtk_list.append(stamp2time(f(x)))
-
-                        plt.figure(figsize=(12, 9))
-                        plt.grid(linestyle=':')
-                        plt.suptitle(ChName, fontproperties=fontTitle)
-                        for st0 in st:
-                            ssTime = (st0.stats.starttime - sTime) * nSample
-                            eeTime = (st0.stats.endtime - sTime) * nSample + 1
-                            nTime = np.arange(ssTime, eeTime)
-                            plt.plot(nTime, st0.data * MON_CHN[ChCode][1], c='blue')
-                        plt.xticks(xtk, xtk_list, fontproperties=font)
-                        plt.xlabel('时间(local time = UTC + 08:00)', fontproperties=fontTitle)
-                        plt.ylabel(MON_CHN[ChCode][0], fontproperties=fontTitle)
-                        plt.savefig(outfile1)
-                        plt.close('all')
-                    except Exception as ex:
-                        print('辅助通道产出图失败\n', ex)
         else:
-            print(file, "Name is error.")
+            pass
 
 
-def Net2dbDemo():
+def addMonData(fSrcDir, static_path, daycount=0):
+    STATIC_PATH = static_path
+    sDenDir = 'networks'
+    fDenDir = os.path.join(STATIC_PATH, sDenDir)
+    mkfile(fDenDir, 0)
+    all_files = []
+    all_paths = []
+    (font, fontTitle) = setFont()
+    if daycount != 0:
+        dayCount = daycount
+    else:
+        dayCount = yes_count(datetime.date.today())
+    all_files, all_paths = show_path(fSrcDir, all_files, all_paths)
+    for I in range(0, len(all_files)):
+        file = all_files[I]
+        path = all_paths[I]
+        if file.count('.') == 6:
+            (NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay) = file.split('.')
+            if (int(nDay) == dayCount and len(NetCode) <= 2 and len(StaCode) <= 5 and len(LocCode) <= 2 and len(
+                    ChCode) <= 3 and DataCode == 'D'
+                    and len(nYear) <= 4 and len(nDay) <= 3):
+
+                sDenDir2 = sDenDir + '/' + NetCode
+                fDenDir = os.path.join(STATIC_PATH, sDenDir2)
+                mkfile(fDenDir, 0)
+
+                sDenDir2 = sDenDir2 + '/' + StaCode
+                fDenDir = os.path.join(STATIC_PATH, sDenDir2)
+                mkfile(fDenDir, 0)
+
+                sDenDir2 = sDenDir2 + '/' + nYear
+                fDenDir = os.path.join(STATIC_PATH, sDenDir2)
+                mkfile(fDenDir, 0)
+
+                sDenDir2 = sDenDir2 + '/' + nDay
+                fDenDir = os.path.join(STATIC_PATH, sDenDir2)
+                mkfile(fDenDir, 0)
+
+                try:
+                    st = read(path)
+                except Exception as ex:
+                    print('%s数据读取错误\n' % file, ex)
+                    continue
+                ChName = NetCode + '.' + StaCode + '.' + LocCode + '.' + ChCode + '.' + nYear + '.' + nDay
+                outfile1 = fDenDir + '/' + ChName + '.day_wave.png'
+
+                print(NetCode, StaCode, LocCode, ChCode, DataCode, nYear, nDay)
+                try:
+                    sTime = st[0].stats.starttime
+                    nSample = st[0].stats.sampling_rate
+
+                    f = lambda tick: sTime.timestamp + tick
+                    xtick = np.arange(3600 * 24 + 1, step=14400)
+                    xtk = []
+                    xtk_list = []
+                    mon_name = MON_CHN[ChCode][0]
+                    mon_weight = MON_CHN[ChCode][1]
+                    mon_units = MON_CHN[ChCode][2]
+                    if re.search(r"[°CAV]+", MON_CHN[ChCode][2]).group():
+                        mon_unit = re.search(r"[°CAV]+", MON_CHN[ChCode][2]).group()  # °C
+                    else:
+                        mon_unit = ''  # °C
+                    max_data = max(st.max()) * mon_weight
+                    min_data = min([min(tr) for tr in st]) * mon_weight
+                    avg_data = (max_data+min_data)/2
+                    daystr = datetime.datetime.now().strftime('%Y-%m-%d')
+                    timestr = "Created by 泰德, " + daystr
+                    for i, x in enumerate(xtick):
+                        xtk.append(x)
+                        xtk_list.append(stamp2time(f(x)))
+                    plt.figure(figsize=(8, 6))
+                    plt.grid(linestyle=':')
+                    for st0 in st:
+                        mon_data = st0.data * mon_weight
+                        ssTime = (st0.stats.starttime - sTime) * nSample
+                        eeTime = (st0.stats.endtime - sTime) * nSample + 1
+                        nTime = np.arange(ssTime, eeTime)
+                        plt.plot(nTime, mon_data, c='blue')
+                        # if (plt.axis()[-1] - plt.axis()[-2]) <= 1:
+                        #     plt.ylim(ymin=(plt.axis()[-2]-0.5), ymax=(plt.axis()[-1]+0.5))
+                        # if 1< (plt.axis()[-1] - plt.axis()[-2]) <= 10:
+                        #     plt.ylim(ymin=(plt.axis()[-2]-10), ymax=(plt.axis()[-1]+10))
+                    plt.xticks(xtk, xtk_list, fontproperties=font)
+                    x0 = '                                                       时间                         ' + timestr
+                    plt.xlabel(x0, fontproperties=font)
+                    plt.ylabel(mon_units, fontproperties=font)
+                    titles = '%s %s %s\n最小值:%.4f%s, 最大值:%.4f%s, 平均值:%.4f%s' % \
+                             (daystr, ChName, mon_name, min_data, mon_unit, max_data, mon_unit, avg_data, mon_unit)
+                    plt.suptitle(titles, fontproperties=fontTitle)
+                    plt.savefig(outfile1)
+                    plt.close('all')
+                except Exception as ex:
+                    print('辅助通道产出图失败\n', ex)
+        else:
+            pass
+
+def Net2dbDemo(opt='all', daycount=0):
     monMatch(MON_PATH)
     if PLATFORM == 'Windows':
-        static_path = os.path.join(os.path.dirname(__file__), 'static')
-        if os.path.exists('D:\\LK\\86.40新镜像程序\\源数据'):
-            addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\data', static_path)
-            # addNetDemo('D:\\LK\\86.40新镜像程序\\源数据\\mondata', static_path, False)
-        elif os.path.exists("E:\\86.40新镜像程序\\源数据\\ATSY"):
-            addNetDemo("E:\\86.40新镜像程序\\源数据\\ATSY", static_path)
-        else:
-            print('Resource File not found!')
-    elif PLATFORM == 'Linux':
+        static_path = 'D:\\LK\\86.40新镜像程序\\产出数据'
+        srcdir = 'D:\\LK\\86.40新镜像程序\\源数据\\'
+        produce = Produce(srcdir, static_path, daycount=daycount)
+    else:
         static_path = '/home/usrdata/usb/django/taide/static'
-        addNetDemo('/home/usrdata/usb/data', static_path)
-        addNetDemo('/home/usrdata/usb/mondata', static_path, False)
+        srcdir = '/home/usrdata/usb/'
+        produce = Produce(srcdir, static_path, daycount=daycount)
+    if os.path.exists(srcdir):
+        if opt == 'all':
+            produce.addData()
+            produce.addMonData()
+        elif opt == 'data':
+            produce.addData()
+        elif opt == 'mondata':
+            produce.addMonData()
+        elif opt == 'qdata':
+            produce.addData(1)
+    else:
+        print('Resource File not found!')
 
 
-def main():
+def checkini():
+    Enable = 1
+    if PLATFORM == 'Windows':
+        basedir = os.path.dirname(os.path.abspath(__file__))
+    else:
+        basedir = '/home/usrdata/pi/tde'
+    ini_path = basedir + '/params/produce.ini'
+    if os.path.exists(ini_path):
+        cf = configparser.ConfigParser()
+        cf.read(ini_path)
+        if cf.has_section('PAR'):
+            if cf.has_option('PAR', 'enable'):
+                Enable = cf.getint('PAR', 'enable')
+        else:
+            cf.set('PAR', 'enable', '1')
+            with open(ini_path, 'w') as wf:
+                cf.write(wf)
+    else:
+        with open(ini_path, 'w+') as wf:
+            cf = configparser.ConfigParser()
+            cf.read(ini_path)
+            cf.add_section('PAR')
+            cf.set('PAR', 'enable', '1')
+            cf.write(wf)
+    return Enable
+
+def main(argv):
     if not os.path.exists(SQL_PATH) and PLATFORM == 'Linux':
         mkfile(os.path.dirname(SQL_PATH), 0)
         os.system('sudo cp /home/usrdata/pi/tde/params/db.sqlite3 %s' % os.path.dirname(SQL_PATH))
-    # updateSql()  # 删除旧数据并更新数据库
+        os.system('sudo chmod 777 %s' % SQL_PATH)
     # isnewSql()  # 更新626为324-2020
+    # updateSql()  # 删除旧数据并更新数据库
+    option = 'all'
+    daycount = 0
+    try:
+        opts, args = getopt.getopt(argv,"hdmqD:", ['day', 'clearsql'])
+    except getopt.GetoptError:
+        print('sudo python3 setdb.py -d <data files> -m <mondata files> -D <day>  -q <quality files> --clearsql')
+        sys.exit(2)
+    if not opts and not checkini():
+        # print('Auto production of pictures is prohibited')
+        sys.exit(0)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('sudo python3 setdb.py -d <data files> -m <mondata files> -D <day> -q <quality files> --clearsql')
+            sys.exit()
+        elif opt == '-d':
+            option = 'data'
+        elif opt == '-m':
+            option = 'mondata'
+        elif opt in ('-D', '-Day'):
+            daycount = int(arg)
+        elif opt == '--clearsql':
+            clearSql()
+            sys.exit(0)
+        elif opt == '-q':  # 质量图产出
+            option = 'qdata'
     sTime = datetime.datetime.now()
-    Net2dbDemo()
+    selopt(daycount).opts_(option)
     eTime = datetime.datetime.now()
     print('用时：%s' % (eTime-sTime))
 
 
 if __name__ == "__main__":
-    MON_CHN = {}
-    MON_KEYS = ('MONITOR1', 'MONITOR2', 'MONITOR3', 'MONITOR4', 'MONITOR5',
-                'MONITOR6', 'MONITOR7', 'MONITOR8', 'MONITOR9', 'MONITOR10')
-    MON_DIST = {'MONITOR1': ('UD1零位幅值(V)', 0.1), 'MONITOR2': ('NS1零位幅值(V)', 0.1),
-                'MONITOR3': ('EW1零位幅值(V)', 0.1), 'MONITOR4': ('UD2零位幅值(V)', 0.1),
-                'MONITOR5': ('NS2零位幅值(V)', 0.1), 'MONITOR6': ('EW2零位幅值(V)', 0.1),
-                'MONITOR7': ('供电电压(V)', 0.001), 'MONITOR8': ('供电电流(A)', 0.00001),
-                'MONITOR9': ('主板温度(°C)', 1), 'MONITOR10': ('采集器温度(°C)', 1)}
-    if platform.system() == 'Windows':
-        PLATFORM = 'Windows'
-        SQL_PATH = 'D:/django/trunk/db.sqlite3'
-        MON_PATH = 'monitor.ini'
-        sys.path.append('D:/django/trunk/')
-    elif platform.system() == 'Linux':
-        PLATFORM = 'Linux'
-        SQL_PATH = '/home/usrdata/usb/django/taide/db.sqlite3'
-        MON_PATH = '/home/usrdata/pi/tde/params/monitor.ini'
-        sys.path.append('/home/usb/django/taide/')
-    # from doobspy import parser_sensor_resp, parser_digitizer_resp
-
-    main()
+    main(sys.argv[1:])
